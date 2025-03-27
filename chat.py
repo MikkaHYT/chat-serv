@@ -254,11 +254,26 @@ def edit_message():
     return jsonify({'status': 'error', 'message': 'Invalid data'}), 400
 
 # Route to fetch online users
-@app.route('/get-online-users', methods=['GET'])
-def get_online_users():
-        if not hasattr(app, 'online_users'):
-            app.online_users = set()
-        return jsonify([{'username': user} for user in app.online_users]), 200
+@app.route('/fetch-online-users', methods=['GET'])
+def fetch_online_users():
+        if hasattr(app, 'online_users'):
+            return jsonify({'onlineUsers': [{'username': user} for user in app.online_users]}), 200
+        return jsonify({'onlineUsers': []}), 200
+
+# Long polling route to fetch online users
+@app.route('/poll-online-users', methods=['GET'])
+def poll_online_users():
+    timeout = 30  # Maximum time to hold the request (in seconds)
+    start_time = time.time()
+    initial_online_users = set(app.online_users) if hasattr(app, 'online_users') else set()
+
+    while time.time() - start_time < timeout:
+        current_online_users = set(app.online_users) if hasattr(app, 'online_users') else set()
+        if current_online_users != initial_online_users:
+            return jsonify({'onlineUsers': [{'username': user} for user in current_online_users]}), 200
+        time.sleep(1)  # Wait for 1 second before checking again
+
+    return jsonify({'onlineUsers': [{'username': user} for user in initial_online_users]}), 200
 
 # Route to mark a user as online
 @app.route('/mark-online', methods=['POST'])
@@ -288,6 +303,14 @@ def admin_get_messages():
                     for row in rows
                 ]
             return jsonify(messages), 200
+
+@app.route('/admin/erase-chat', methods=['POST'])
+def erase_chat():
+    with sqlite3.connect(db_file) as conn:
+        cursor = conn.cursor()
+        cursor.execute('DELETE FROM messages')
+        conn.commit()
+    return jsonify({'status': 'success', 'message': 'Chat erased'}), 200
 
 # Route to delete a message by admin
 @app.route('/admin/delete-message', methods=['POST'])
@@ -352,7 +375,22 @@ def typing_status():
     if not hasattr(app, 'typing_users'):
         app.typing_users = set()
     return jsonify({'typingUsers': list(app.typing_users)}), 200
+    # Long polling route to fetch typing status
 
+
+@app.route('/poll-typing-status', methods=['GET'])
+def poll_typing_status():
+        timeout = 30  # Maximum time to hold the request (in seconds)
+        start_time = time.time()
+        initial_typing_users = set(app.typing_users) if hasattr(app, 'typing_users') else set()
+
+        while time.time() - start_time < timeout:
+            current_typing_users = set(app.typing_users) if hasattr(app, 'typing_users') else set()
+            if current_typing_users != initial_typing_users:
+                return jsonify({'typingUsers': list(current_typing_users)}), 200
+            time.sleep(1)  # Wait for 1 second before checking again
+
+        return jsonify({'typingUsers': list(initial_typing_users)}), 200
 # Route to handle deleting a message
 @app.route('/delete-message', methods=['POST'])
 def delete_message():
@@ -430,6 +468,8 @@ def poll_messages():
         return jsonify([])  # Return an empty list if no new messages
     except ValueError:
         return jsonify({'status': 'error', 'message': 'Invalid last_id'}), 400
+
+
 
 # Long polling route to fetch new messages for the private chat
 @app.route('/poll-private-messages', methods=['GET'])

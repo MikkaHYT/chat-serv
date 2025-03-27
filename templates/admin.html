@@ -90,6 +90,20 @@
         .refresh-button:hover {
             background-color: #218838;
         }
+
+        .erase-button {
+            background-color: #f73838;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        .erase-button:hover {
+            background-color: #9e0101;
+        }
     </style>
 </head>
 <body>
@@ -98,6 +112,7 @@
     </header>
     <main>
         <button class="refresh-button" id="refresh-messages">Refresh Messages</button>
+        <button class="erase-button" id="erase-chat">Erase Chat</button>
         <h2>Messages</h2>
         <table id="messages-table">
             <thead>
@@ -154,6 +169,7 @@
         });
         const messagesTableBody = document.getElementById('messages-table').querySelector('tbody');
         const refreshButton = document.getElementById('refresh-messages');
+        const eraseButton = document.getElementById('erase-chat');
 
         // Fetch all messages from the server
         function fetchMessages() {
@@ -178,6 +194,25 @@
                     });
                 })
                 .catch(error => console.error('Error fetching messages:', error));
+        }
+
+        // Erase all messages from the server
+        function eraseMessages() {
+            if (confirm('Are you sure you want to erase all messages?')) {
+                fetch('/admin/erase-chat', {
+                    method: 'POST'
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        alert('Chat erased successfully!');
+                        fetchMessages(); // Refresh the table
+                    } else {
+                        alert('Error erasing chat: ' + data.message);
+                    }
+                })
+                .catch(error => console.error('Error erasing chat:', error));
+            }
         }
 
         // Handle edit button click
@@ -232,6 +267,9 @@
 
         // Refresh messages when the refresh button is clicked
         refreshButton.addEventListener('click', fetchMessages);
+
+        // Refresh messages when the refresh button is clicked
+        eraseButton.addEventListener('click', eraseMessages);
 
         // Fetch messages on page load
         window.addEventListener('DOMContentLoaded', fetchMessages);
