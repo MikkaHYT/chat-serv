@@ -400,6 +400,9 @@
 
         // Simulate receiving typing events from the server
         setInterval(() => {
+            if (!document.hasFocus()) {
+                return; // Skip fetching typing status if the tab is not in focus
+            }
             fetch('/typing-status')
                 .then((response) => response.json())
                 .then((data) => {
