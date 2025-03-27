@@ -347,6 +347,61 @@
         </form>
     </div>
 
+    <div id="online-users-bar" style="position: fixed; top: 46.2px; right: 0; width: 200px; height: 86.67%; background-color: #f1f1f1; border-left: 1px solid #ccc; overflow-y: auto; padding: 10px;">
+        <h3>Online Users</h3>
+        <ul id="online-users-list" style="list-style: none; padding: 0; margin: 0;">
+            <!-- Online users will be dynamically added here -->
+        </ul>
+    </div>
+
+    <script>
+        const onlineUsersList = document.getElementById('online-users-list');
+
+        function fetchOnlineUsers() {
+            fetch('/get-online-users')
+                .then((response) => response.json())
+                .then((users) => {
+                    onlineUsersList.innerHTML = ''; // Clear the list
+                    users.forEach((user) => {
+                        const userItem = document.createElement('li');
+                        userItem.textContent = user.username;
+                        userItem.style.marginBottom = '10px';
+                        onlineUsersList.appendChild(userItem);
+                    });
+                })
+                .catch((error) => console.error('Error fetching online users:', error));
+        }
+
+        function markUserOnline(username) {
+            fetch('/mark-online', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username }),
+            }).catch((error) => console.error('Error marking user online:', error));
+        }
+
+        function markUserOffline(username) {
+            fetch('/mark-offline', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username }),
+            }).catch((error) => console.error('Error marking user offline:', error));
+        }
+
+        
+
+        // Mark the user offline when they leave
+        window.addEventListener('beforeunload', () => {
+            if (username) {
+                markUserOffline(username);
+            }
+        });
+
+        // Poll for online users every 10 seconds
+        setInterval(fetchOnlineUsers, 5000);
+        fetchOnlineUsers(); // Initial fetch
+    </script>
+
     <button id="private-chat-button">PRIVATE CHAT</button>
     <button id="theme-button">Change Theme</button>
     <button id="game-button">Play Rock-Paper-Scissors</button>
@@ -802,7 +857,13 @@ function handleBackgroundUpload(event) {
     }
 
 // Call loadUserData on page load
-window.addEventListener('DOMContentLoaded', loadUserData,);
+window.addEventListener('DOMContentLoaded', () => {
+    loadUserData();
+    if (username) {
+        markUserOnline(username);
+    }
+});
+
 
 window.addEventListener('DOMContentLoaded', () => {
     // Start fetching messages

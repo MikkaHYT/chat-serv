@@ -253,6 +253,34 @@ def edit_message():
         return jsonify({'status': 'success', 'message': 'Message updated'}), 200
     return jsonify({'status': 'error', 'message': 'Invalid data'}), 400
 
+# Route to fetch online users
+@app.route('/get-online-users', methods=['GET'])
+def get_online_users():
+        if not hasattr(app, 'online_users'):
+            app.online_users = set()
+        return jsonify([{'username': user} for user in app.online_users]), 200
+
+# Route to mark a user as online
+@app.route('/mark-online', methods=['POST'])
+def mark_online():
+        data = request.get_json()
+        if 'username' in data:
+            if not hasattr(app, 'online_users'):
+                app.online_users = set()
+            app.online_users.add(data['username'])
+            return jsonify({'status': 'success', 'message': f'{data["username"]} is now online.'}), 200
+        return jsonify({'status': 'error', 'message': 'Invalid data'}), 400
+
+# Route to mark a user as offline
+@app.route('/mark-offline', methods=['POST'])
+def mark_offline():
+        data = request.get_json()
+        if 'username' in data:
+            if hasattr(app, 'online_users') and data['username'] in app.online_users:
+                app.online_users.remove(data['username'])
+            return jsonify({'status': 'success', 'message': f'{data["username"]} is now offline.'}), 200
+        return jsonify({'status': 'error', 'message': 'Invalid data'}), 400
+
 # Route to handle typing indicator
 @app.route('/typing', methods=['POST'])
 def typing():
