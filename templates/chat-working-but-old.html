@@ -894,9 +894,6 @@ function loadUserData() {
 // Long polling for new messages
 function pollMessages() {
     console.log('Polling messages');
-    if (!document.hasFocus()) {
-                return; // Skip fetching if the tab is not in focus
-            }
         fetch(`/poll-messages?last_id=${lastMessageId}`)
             .then((response) => response.json())
             .then((messages) => {
