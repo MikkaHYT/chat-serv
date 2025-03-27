@@ -599,6 +599,11 @@ messagesDiv.addEventListener('click', (e) => {
         window.location.href = '/private';
     });
 
+    // Handle admin button click
+    adminButton.addEventListener('click', () => {
+        window.location.href = '/admin';
+    });
+
     // Long polling for private messages
     function pollPrivateMessages() {
         fetch(`/poll-private-messages?last_id=${lastMessageId}`)
