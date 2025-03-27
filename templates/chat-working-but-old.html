@@ -370,6 +370,46 @@
             <!-- Online users will be dynamically added here -->
         </ul>
     </div>
+    <script>
+        const typingUsers = new Set();
+
+        function updateTypingIndicator() {
+    const onlineUsersList = document.getElementById('online-users-list');
+    Array.from(onlineUsersList.children).forEach((userItem) => {
+        const username = userItem.dataset.username || userItem.textContent.trim();
+        console.log('Current username:', username);
+        if (typingUsers.has(username)) {
+            if (!userItem.textContent.includes('- typing...')) {
+                userItem.textContent = `${username} - typing...`;
+            }
+        } else {
+            userItem.textContent = username; // Reset to just the username
+        }
+    });
+}
+
+        // Listen for typing events
+        function handleTyping(username, isTyping) {
+            if (isTyping) {
+                typingUsers.add(username);
+            } else {
+                typingUsers.delete(username);
+            }
+            updateTypingIndicator();
+        }
+
+        // Simulate receiving typing events from the server
+        setInterval(() => {
+            fetch('/typing-status')
+                .then((response) => response.json())
+                .then((data) => {
+                    typingUsers.clear();
+                    data.typingUsers.forEach((user) => typingUsers.add(user));
+                    updateTypingIndicator();
+                })
+                .catch((error) => console.error('Error fetching typing status:', error));
+        }, 1000);
+    </script>
 
     <script>
         const onlineUsersList = document.getElementById('online-users-list');
@@ -919,6 +959,9 @@ window.addEventListener('DOMContentLoaded', () => {
 // Save user data when username form is submitted
 usernameForm.addEventListener('submit', () => {
     saveUserData();
+    if (username) {
+        markUserOnline(username);
+    }
 });
 
 // Handle message form submission
@@ -992,6 +1035,7 @@ imageUpload.addEventListener('change', () => {
 
 // Handle logout button click
 document.getElementById('logout-button').addEventListener('click', () => {
+    markUserOffline(username);
     localStorage.removeItem('chatUserData'); // Clear user data from localStorage
     username = '';
     profilePic = '';

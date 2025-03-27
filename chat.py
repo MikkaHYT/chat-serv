@@ -326,25 +326,32 @@ def mark_offline():
 # Route to handle typing indicator
 @app.route('/typing', methods=['POST'])
 def typing():
-        data = request.get_json()
-        if 'username' in data:
-            username = data['username']
-            if not hasattr(app, 'typing_users'):
-                app.typing_users = set()
-            app.typing_users.add(username)
-            return jsonify({'status': 'success', 'message': f'{username} is typing...'}), 200
-        return jsonify({'status': 'error', 'message': 'Invalid data'}), 400
+    data = request.get_json()
+    if 'username' in data:
+        username = data['username']
+        if not hasattr(app, 'typing_users'):
+            app.typing_users = set()
+        app.typing_users.add(username)
+        return jsonify({'status': 'success', 'message': f'{username} is typing...'}), 200
+    return jsonify({'status': 'error', 'message': 'Invalid data'}), 400
 
 # Route to handle stopping typing indicator
 @app.route('/stop-typing', methods=['POST'])
 def stop_typing():
-        data = request.get_json()
-        if 'username' in data:
-            username = data['username']
-            if hasattr(app, 'typing_users') and username in app.typing_users:
-                app.typing_users.remove(username)
-            return jsonify({'status': 'success', 'message': f'{username} stopped typing.'}), 200
-        return jsonify({'status': 'error', 'message': 'Invalid data'}), 400
+    data = request.get_json()
+    if 'username' in data:
+        username = data['username']
+        if hasattr(app, 'typing_users') and username in app.typing_users:
+            app.typing_users.remove(username)
+        return jsonify({'status': 'success', 'message': f'{username} stopped typing.'}), 200
+    return jsonify({'status': 'error', 'message': 'Invalid data'}), 400
+
+# Route to fetch typing users
+@app.route('/typing-status', methods=['GET'])
+def typing_status():
+    if not hasattr(app, 'typing_users'):
+        app.typing_users = set()
+    return jsonify({'typingUsers': list(app.typing_users)}), 200
 
 # Route to handle deleting a message
 @app.route('/delete-message', methods=['POST'])
