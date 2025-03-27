@@ -305,6 +305,23 @@
         background-color: #5a6268;
     }
 
+    #admin-button {
+        position: absolute;
+        top: 60px;
+        right: 230px;
+        background-color: #6c757d;
+        color: white;
+        border: none;
+        border-radius: 5px;
+        padding: 10px 15px;
+        cursor: pointer;
+        font-weight: bold;
+    }
+
+    #admin-button:hover {
+            background-color: #23272b;
+        }
+
     /* Mini-Games */
     #game-button {
         position: absolute;
@@ -398,14 +415,15 @@
         });
 
         // Poll for online users every 10 seconds
-        setInterval(fetchOnlineUsers, 5000);
+        setInterval(fetchOnlineUsers, 10000);
         fetchOnlineUsers(); // Initial fetch
     </script>
 
     <button id="private-chat-button">PRIVATE CHAT</button>
     <button id="theme-button">Change Theme</button>
     <button id="game-button">Play Rock-Paper-Scissors</button>
-    <button id="code-button">Play Rock-Paper-Scissors</button>
+    <button id="admin-button" class="action-button">Admin Panel</button>
+
 
     
     <script>
@@ -417,6 +435,7 @@ const messageForm = document.getElementById('message-form');
 const messageInput = document.getElementById('message-input');
 const imageUpload = document.getElementById('image-upload');
 const uploadButton = document.getElementById('upload-button');
+const adminButton = document.getElementById('admin-button');
 let username = '';
 let profilePic = '';
 let lastMessageId = -1; // Initialize to -1 to fetch all messages on first load
@@ -832,6 +851,7 @@ function pollMessages() {
                     lastMessageId = Math.max(lastMessageId, message.id);
                 });
                 pollMessages(); // Continue polling after receiving a response
+                fetchOnlineUsers(); // Update online users list
             })
             .catch((error) => {
                 console.error('Error polling messages:', error);
@@ -883,6 +903,9 @@ window.addEventListener('DOMContentLoaded', () => {
     fetchAllMessages();
     console.log("Running pollMessages");
     pollMessages(); // Start long polling
+    console.log("Running fetchOnlineUsers");
+    fetchOnlineUsers(); // Fetch online users initially
+
 
     
 });

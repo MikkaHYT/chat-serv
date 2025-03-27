@@ -271,6 +271,48 @@ def mark_online():
             return jsonify({'status': 'success', 'message': f'{data["username"]} is now online.'}), 200
         return jsonify({'status': 'error', 'message': 'Invalid data'}), 400
 
+# Route to serve the admin page
+@app.route('/admin')
+def admin_page():
+            return render_template('admin.html')
+
+# Route to fetch all messages for admin management
+@app.route('/admin/get-messages', methods=['GET'])
+def admin_get_messages():
+            with sqlite3.connect(db_file) as conn:
+                cursor = conn.cursor()
+                cursor.execute('SELECT * FROM messages ORDER BY id ASC')
+                rows = cursor.fetchall()
+                messages = [
+                    {'id': row[0], 'username': row[1], 'profilePic': row[2], 'message': row[3], 'image': row[4], 'reactions': row[5]}
+                    for row in rows
+                ]
+            return jsonify(messages), 200
+
+# Route to delete a message by admin
+@app.route('/admin/delete-message', methods=['POST'])
+def admin_delete_message():
+            data = request.get_json()
+            if 'id' in data:
+                with sqlite3.connect(db_file) as conn:
+                    cursor = conn.cursor()
+                    cursor.execute('DELETE FROM messages WHERE id = ?', (data['id'],))
+                    conn.commit()
+                return jsonify({'status': 'success', 'message': 'Message deleted by admin'}), 200
+            return jsonify({'status': 'error', 'message': 'Invalid data'}), 400
+
+# Route to edit a message by admin
+@app.route('/admin/edit-message', methods=['POST'])
+def admin_edit_message():
+            data = request.get_json()
+            if 'id' in data and 'message' in data:
+                with sqlite3.connect(db_file) as conn:
+                    cursor = conn.cursor()
+                    cursor.execute('UPDATE messages SET message = ? WHERE id = ?', (data['message'], data['id']))
+                    conn.commit()
+                return jsonify({'status': 'success', 'message': 'Message edited by admin'}), 200
+            return jsonify({'status': 'error', 'message': 'Invalid data'}), 400
+
 # Route to mark a user as offline
 @app.route('/mark-offline', methods=['POST'])
 def mark_offline():

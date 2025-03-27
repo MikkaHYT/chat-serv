@@ -255,6 +255,15 @@
         .delete-button:hover {
             background-color: #e60000;
         }
+
+        #admin-button {
+            right: 70%;
+            background-color: #343a40;
+        }
+
+        #admin-button:hover {
+            background-color: #23272b;
+        }
     </style>
 </head>
 <body>
@@ -315,10 +324,16 @@
         const settingsModal = document.getElementById('settings-modal');
         const darkModeToggle = document.getElementById('dark-mode-toggle');
         const closeSettingsButton = document.getElementById('close-settings');
+        const adminButton = document.getElementById('admin-button');
 
         let username = '';
         let profilePic = '';
         let lastMessageId = -1;
+
+        // Handle Admin Button Click
+        adminButton.addEventListener('click', () => {
+            window.location.href = '/admin';
+        });
 
         // Load Dark Mode Preference
         if (localStorage.getItem('darkMode') === 'enabled') {
