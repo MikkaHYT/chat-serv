@@ -432,7 +432,7 @@
             const isOwnMessage = messageUsername === username;
 
             messageElement.innerHTML = `
-                <img src="${profilePic || 'https://via.placeholder.com/50'}" alt="Profile Picture">
+                <img src="${profilePic || 'https://media4.giphy.com/media/WXB88TeARFVvi/giphy.gif?cid=6c09b952vrupqilqdmprkp6jamclfnt7k7wkg32b4xemeu1c&ep=v1_gifs_search&rid=giphy.gif&ct=g'}" alt="Profile Picture">
                 <div class="message-content">
                     <strong>${messageUsername}</strong>
                     <p>${message}</p>
@@ -471,7 +471,44 @@
         messagesDiv.addEventListener('click', (e) => {
             if (e.target.classList.contains('react-button')) {
                 const messageId = e.target.dataset.messageId;
-                const reaction = prompt('React with an emoji:');
+                const emojiPicker = document.createElement('div');
+                emojiPicker.style.position = 'absolute';
+                emojiPicker.style.background = '#fff';
+                emojiPicker.style.border = '1px solid #ccc';
+                emojiPicker.style.padding = '10px';
+                emojiPicker.style.borderRadius = '5px';
+                emojiPicker.style.boxShadow = '0 4px 6px rgba(0, 0, 0, 0.1)';
+                emojiPicker.style.zIndex = '1000';
+                emojiPicker.style.display = 'grid';
+                emojiPicker.style.gridTemplateColumns = 'repeat(5, 1fr)';
+                emojiPicker.style.gap = '5px';
+
+                const emojis = ['😀', '😂', '😍', '😎', '😢', '😡', '👍', '👎', '🎉', '❤️'];
+                emojis.forEach((emoji) => {
+                    const emojiButton = document.createElement('button');
+                    emojiButton.textContent = emoji;
+                    emojiButton.style.border = 'none';
+                    emojiButton.style.background = 'transparent';
+                    emojiButton.style.fontSize = '20px';
+                    emojiButton.style.cursor = 'pointer';
+                    emojiButton.addEventListener('click', () => {
+                        fetch('/add-reaction', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ id: messageId, reaction: emoji }),
+                        }).then(() => {
+                            fetchMessages(); // Refresh messages to show updated reactions
+                            document.body.removeChild(emojiPicker);
+                        });
+                    });
+                    emojiPicker.appendChild(emojiButton);
+                });
+
+                document.body.appendChild(emojiPicker);
+
+                const rect = e.target.getBoundingClientRect();
+                emojiPicker.style.top = `${rect.bottom + window.scrollY}px`;
+                emojiPicker.style.left = `${rect.left + window.scrollX}px`;
                 if (reaction) {
                     fetch('/add-reaction', {
                         method: 'POST',
