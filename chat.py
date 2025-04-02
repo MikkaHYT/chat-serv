@@ -1,22 +1,21 @@
-from flask import Flask, request, jsonify, render_template
+from flask import Flask, render_template, request, jsonify
+from flask_socketio import SocketIO, emit, join_room, leave_room
 import os
-import base64
-import uuid
 import sqlite3
-import time
 
 app = Flask(__name__)
+app.config['mikka'] = 'your_secret_key'  # Replace with a secure key
+socketio = SocketIO(app)
 
 # Directory to store uploaded images
 image_upload_dir = 'static/uploads'
 os.makedirs(image_upload_dir, exist_ok=True)
 
-# Initialize SQLite databases
+# SQLite database file
 db_file = 'chat.db'
-private_db_file = 'private_chat.db'
 
+# Initialize SQLite database
 def init_db():
-    """Initialize the public chat database."""
     with sqlite3.connect(db_file) as conn:
         cursor = conn.cursor()
         cursor.execute('''
@@ -31,464 +30,254 @@ def init_db():
         ''')
         conn.commit()
 
-def init_private_db():
-    """Initialize the private chat database."""
-    with sqlite3.connect(private_db_file) as conn:
-        cursor = conn.cursor()
-        cursor.execute('''
-            CREATE TABLE IF NOT EXISTS messages (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                username TEXT NOT NULL,
-                profilePic TEXT,
-                message TEXT NOT NULL,
-                image TEXT,
-                reactions TEXT
-            )
-        ''')
-        conn.commit()
-
-# Initialize both databases
 init_db()
-init_private_db()
 
-# Function to save a message to a database
-def save_message_to_db(db_path, username, profilePic, message, image):
-    with sqlite3.connect(db_path) as conn:
+# Save a message to the database
+def save_message_to_db(username, profilePic, message, image):
+    with sqlite3.connect(db_file) as conn:
         cursor = conn.cursor()
         cursor.execute('''
-            INSERT INTO messages (username, profilePic, message, image)
-            VALUES (?, ?, ?, ?)
-        ''', (username, profilePic, message, image))
+            INSERT INTO messages (username, profilePic, message, image, reactions)
+            VALUES (?, ?, ?, ?, ?)
+        ''', (username, profilePic, message, image, ''))
         conn.commit()
         return cursor.lastrowid
 
-# Function to load messages from a database
-def load_messages_from_db(db_path, last_id=None):
-    with sqlite3.connect(db_path) as conn:
+# Load all messages from the database
+def load_messages_from_db():
+    with sqlite3.connect(db_file) as conn:
         cursor = conn.cursor()
-        if last_id is not None:
-            cursor.execute('SELECT * FROM messages WHERE id > ? ORDER BY id ASC', (last_id,))
-        else:
-            cursor.execute('SELECT * FROM messages ORDER BY id ASC')
+        cursor.execute('SELECT * FROM messages ORDER BY id ASC')
         rows = cursor.fetchall()
-        return [{'id': row[0], 'username': row[1], 'profilePic': row[2], 'message': row[3], 'image': row[4]} for row in rows]
+        return [
+            {'id': row[0], 'username': row[1], 'profilePic': row[2], 'message': row[3], 'image': row[4], 'reactions': row[5]}
+            for row in rows
+        ]
 
-# Route to serve the public chat page
-@app.route('/beta')
+# Route to serve the chat page
+@app.route('/')
 def chat():
     return render_template('chat.html')
 
-# Route to serve the alt public chat page
-@app.route('/')
-def alt_chat():
-    return render_template('chat-working-but-old.html')
-
-# Route to serve the private chat page
-@app.route('/private')
+@app.route('/privatechat')
 def private_chat():
     return render_template('private_chat.html')
 
+@app.route('/sh')
+def sh():
+    return render_template('sh.html')
 
-# Long polling route to fetch edited messages for the public chat
-@app.route('/poll-edited-messages', methods=['GET'])
-def poll_edited_messages():
-        last_check_time = request.args.get('last_check_time', None)
-        try:
-            if last_check_time is not None:
-                last_check_time = float(last_check_time)
-            else:
-                return jsonify({'status': 'error', 'message': 'Invalid last_check_time'}), 400
+# Socket.IO events
+#@socketio.on('connect')
+#def handle_connect():
+    #print('A user connected')
 
-            timeout = 30  # Maximum time to hold the request (in seconds)
-            start_time = time.time()
-            while time.time() - start_time < timeout:
-                with sqlite3.connect(db_file) as conn:
-                    cursor = conn.cursor()
-                    cursor.execute('''
-                        SELECT id, username, profilePic, message, image
-                        FROM messages
-                        WHERE strftime('%s', last_updated) > ?
-                    ''', (last_check_time,))
-                    rows = cursor.fetchall()
-                    if rows:
-                        edited_messages = [
-                            {'id': row[0], 'username': row[1], 'profilePic': row[2], 'message': row[3], 'image': row[4]}
-                            for row in rows
-                        ]
-                        return jsonify(edited_messages)
-                time.sleep(1)  # Wait for 1 second before checking again
-            return jsonify([])  # Return an empty list if no edited messages
-        except ValueError:
-            return jsonify({'status': 'error', 'message': 'Invalid last_check_time'}), 400
-### Rock Paper Scissors Game ###
-# Route to handle starting a game
-@app.route('/start-game', methods=['POST'])
-def start_game():
-        data = request.get_json(force=True)
-        username = data.get('username')
-        if username:
-            # Save the player to a temporary in-memory list
-            if not hasattr(app, 'waiting_players'):
-                app.waiting_players = []
-            app.waiting_players.append(username)
-            return jsonify({'status': 'waiting'}), 200
-        return jsonify({'status': 'error', 'message': 'Invalid username'}), 400
+#@socketio.on('disconnect')
+#def handle_disconnect():
+    #print('A user disconnected')
 
-# Route to check for an opponent
-@app.route('/check-opponent', methods=['GET'])
-def check_opponent():
-        if hasattr(app, 'waiting_players') and len(app.waiting_players) > 1:
-            # Match the first two players in the waiting list
-            player1 = app.waiting_players.pop(0)
-            player2 = app.waiting_players.pop(0)
-            return jsonify({'opponent': player2}), 200
-        return jsonify({'opponent': None}), 200
+@socketio.on('edit_message')
+def handle_edit_message(data):
+        message_id = data.get('id')
+        new_message = data.get('message')
 
-# Route to handle playing the Rock-Paper-Scissors game
-@app.route('/play-game', methods=['POST'])
-def play_game():
-            data = request.get_json()
-            username = data.get('username')
-            user_choice = data.get('choice')
-            print(user_choice)
-            choices = ['rock', 'paper', 'scissors']
-
-            if username and user_choice in choices:
-                
-                opponent_choice = choices[uuid.uuid4().int % 3]
-
-                # Determine the result
-                if user_choice == opponent_choice:
-                    result = 'It\'s a tie!'
-                elif (user_choice == 'Rock' and opponent_choice == 'Scissors') or \
-                     (user_choice == 'Paper' and opponent_choice == 'Rock') or \
-                     (user_choice == 'Scissors' and opponent_choice == 'Paper'):
-                    result = 'You win!'
-                else:
-                    result = 'You lose!'
-
-                return jsonify({
-                    'opponentChoice': opponent_choice,
-                    'result': result
-                }), 200
-
-            return jsonify({'status': 'error', 'message': 'Invalid data'}), 400
-            # Route to handle syncing opponent choices and play stages
-@app.route('/sync-game', methods=['POST'])
-def sync_game():
-                data = request.get_json()
-                username = data.get('username')
-                user_choice = data.get('choice')
-                if not hasattr(app, 'game_sessions'):
-                    app.game_sessions = {}
-
-                # Check if the user is already in a game session
-                for session_id, session in app.game_sessions.items():
-                    if username in session['players']:
-                        session['choices'][username] = user_choice
-                        if len(session['choices']) == 2:
-                            # Both players have made their choices, determine the result
-                            player1, player2 = session['players']
-                            choice1 = session['choices'][player1]
-                            choice2 = session['choices'][player2]
-
-                            if choice1 == choice2:
-                                result = 'It\'s a tie!'
-                            elif (choice1 == 'rock' and choice2 == 'scissors') or \
-                                 (choice1 == 'paper' and choice2 == 'rock') or \
-                                 (choice1 == 'scissors' and choice2 == 'paper'):
-                                result = f'{player1} wins!'
-                            else:
-                                result = f'{player2} wins!'
-
-                            # Return the results to both players
-                            session['result'] = {
-                                player1: {'opponentChoice': choice2, 'result': result},
-                                player2: {'opponentChoice': choice1, 'result': result}
-                            }
-                            return jsonify(session['result'][username]), 200
-
-                        # Wait for the opponent's choice
-                        return jsonify({'status': 'waiting'}), 200
-
-                # Create a new game session if no existing session is found
-                session_id = str(uuid.uuid4())
-                app.game_sessions[session_id] = {
-                    'players': [username],
-                    'choices': {}
-                }
-                return jsonify({'status': 'waiting'}), 200
-# Route to handle sending a message to the public chat
-@app.route('/send-message', methods=['POST'])
-def send_message():
-    data = request.get_json()
-    if 'username' in data and 'message' in data:
-        # Save the message to the public database
-        new_message_id = save_message_to_db(
-            db_file,
-            username=data['username'],
-            profilePic=data.get('profilePic', ''),
-            message=data['message'],
-            image=data.get('image', '')
-        )
-        new_message = {
-            'id': new_message_id,
-            'username': data['username'],
-            'profilePic': data.get('profilePic', ''),
-            'message': data['message'],
-            'image': data.get('image', '')
-        }
-        return jsonify({'status': 'success', 'message': new_message}), 200
-    return jsonify({'status': 'error', 'message': 'Invalid data'}), 400
-
-# Route to handle editing a message
-@app.route('/edit-message', methods=['POST'])
-def edit_message():
-    data = request.get_json()
-    if 'id' in data and 'message' in data:
         with sqlite3.connect(db_file) as conn:
             cursor = conn.cursor()
-            cursor.execute('UPDATE messages SET message = ? WHERE id = ?', (data['message'], data['id']))
+            cursor.execute('UPDATE messages SET message = ? WHERE id = ?', (new_message, message_id))
             conn.commit()
-        return jsonify({'status': 'success', 'message': 'Message updated'}), 200
-    return jsonify({'status': 'error', 'message': 'Invalid data'}), 400
 
-# Route to fetch online users
-@app.route('/fetch-online-users', methods=['GET'])
-def fetch_online_users():
-        if hasattr(app, 'online_users'):
-            return jsonify({'onlineUsers': [{'username': user} for user in app.online_users]}), 200
-        return jsonify({'onlineUsers': []}), 200
+        # Broadcast the updated message to all clients
+        emit('update_message', {'id': message_id, 'message': f"{new_message} (edited)"}, broadcast=True)
 
-# Long polling route to fetch online users
-@app.route('/poll-online-users', methods=['GET'])
-def poll_online_users():
-    timeout = 30  # Maximum time to hold the request (in seconds)
-    start_time = time.time()
-    initial_online_users = set(app.online_users) if hasattr(app, 'online_users') else set()
+@socketio.on('delete_message')
+def handle_delete_message(data):
+        message_id = data.get('id')
 
-    while time.time() - start_time < timeout:
-        current_online_users = set(app.online_users) if hasattr(app, 'online_users') else set()
-        if current_online_users != initial_online_users:
-            return jsonify({'onlineUsers': [{'username': user} for user in current_online_users]}), 200
-        time.sleep(1)  # Wait for 1 second before checking again
+        with sqlite3.connect(db_file) as conn:
+            cursor = conn.cursor()
+            cursor.execute('DELETE FROM messages WHERE id = ?', (message_id,))
+            conn.commit()
 
-    return jsonify({'onlineUsers': [{'username': user} for user in initial_online_users]}), 200
+        # Broadcast the removal of the message to all clients
+        emit('remove_message', {'id': message_id}, broadcast=True)
 
-# Route to mark a user as online
-@app.route('/mark-online', methods=['POST'])
-def mark_online():
-        data = request.get_json()
-        if 'username' in data:
-            if not hasattr(app, 'online_users'):
-                app.online_users = set()
-            app.online_users.add(data['username'])
-            return jsonify({'status': 'success', 'message': f'{data["username"]} is now online.'}), 200
-        return jsonify({'status': 'error', 'message': 'Invalid data'}), 400
-
-# Route to serve the admin page
-@app.route('/admin')
-def admin_page():
-            return render_template('admin.html')
-
-# Route to fetch all messages for admin management
-@app.route('/admin/get-messages', methods=['GET'])
-def admin_get_messages():
+@socketio.on('load_private_messages')
+def handle_load_private_messages(data):
+        room = data.get('room')
+        if room:
             with sqlite3.connect(db_file) as conn:
                 cursor = conn.cursor()
-                cursor.execute('SELECT * FROM messages ORDER BY id ASC')
+                cursor.execute('SELECT * FROM messages WHERE room = ? ORDER BY id ASC', (room,))
                 rows = cursor.fetchall()
                 messages = [
                     {'id': row[0], 'username': row[1], 'profilePic': row[2], 'message': row[3], 'image': row[4], 'reactions': row[5]}
                     for row in rows
                 ]
-            return jsonify(messages), 200
+            emit('load_private_messages', messages, room=room)
 
-@app.route('/admin/erase-chat', methods=['POST'])
-def erase_chat():
+@socketio.on('start_typing')
+def handle_start_typing(data):
+    username = data.get('username')
+    if username and username in online_users:
+        print(f"{username} started typing")
+        online_users[username]['isTyping'] = True
+        emit('update_online_users', [{'username': user, 'isTyping': info['isTyping']} for user, info in online_users.items()], broadcast=True)
+
+@socketio.on('stop_typing')
+def handle_stop_typing(data):
+    username = data.get('username')
+    if username and username in online_users:
+        print(f"{username} stopped typing")
+        online_users[username]['isTyping'] = False
+        emit('update_online_users', [{'username': user, 'isTyping': info['isTyping']} for user, info in online_users.items()], broadcast=True)
+
+@socketio.on('send_message')
+def handle_send_message(data):
+    username = data.get('username')
+    profilePic = data.get('profilePic', '')
+    message = data.get('message')
+    image = data.get('image', '')
+
+    # Save the message to the database
+    message_id = save_message_to_db(username, profilePic, message, image)
+
+    # Broadcast the message to all connected clients
+    emit('receive_message', {
+        'id': message_id,
+        'username': username,
+        'profilePic': profilePic,
+        'message': message,
+        'image': image,
+        'reactions': ''
+    }, broadcast=True)
+
+@socketio.on('connect')
+def handle_connect():
+    print('A user connected')
+    # Emit all messages to the newly connected client
+    emit('load_messages', load_messages_from_db(), broadcast=False)
+
+# Track online users
+online_users = {}
+
+@socketio.on('join')
+def handle_join(data):
+    username = data.get('username')
+    if username:
+        print(f"{username} has come online")
+        online_users[username] = {'isTyping': False}
+        emit('update_online_users', [{'username': user, 'isTyping': info['isTyping']} for user, info in online_users.items()], broadcast=True)
+
+@socketio.on('leave')
+def handle_leave(data):
+    username = data.get('username')
+    if username and username in online_users:
+        print(f"{username} has went offline")
+        del online_users[username]
+        emit('update_online_users', [{'username': user, 'isTyping': info['isTyping']} for user, info in online_users.items()], broadcast=True)
+
+@socketio.on('add_reaction')
+def handle_add_reaction(data):
+    message_id = data.get('id')
+    reaction = data.get('reaction')
+
     with sqlite3.connect(db_file) as conn:
         cursor = conn.cursor()
-        cursor.execute('DELETE FROM messages')
-        conn.commit()
-    return jsonify({'status': 'success', 'message': 'Chat erased'}), 200
-
-# Route to delete a message by admin
-@app.route('/admin/delete-message', methods=['POST'])
-def admin_delete_message():
-            data = request.get_json()
-            if 'id' in data:
-                with sqlite3.connect(db_file) as conn:
-                    cursor = conn.cursor()
-                    cursor.execute('DELETE FROM messages WHERE id = ?', (data['id'],))
-                    conn.commit()
-                return jsonify({'status': 'success', 'message': 'Message deleted by admin'}), 200
-            return jsonify({'status': 'error', 'message': 'Invalid data'}), 400
-
-# Route to edit a message by admin
-@app.route('/admin/edit-message', methods=['POST'])
-def admin_edit_message():
-            data = request.get_json()
-            if 'id' in data and 'message' in data:
-                with sqlite3.connect(db_file) as conn:
-                    cursor = conn.cursor()
-                    cursor.execute('UPDATE messages SET message = ? WHERE id = ?', (data['message'], data['id']))
-                    conn.commit()
-                return jsonify({'status': 'success', 'message': 'Message edited by admin'}), 200
-            return jsonify({'status': 'error', 'message': 'Invalid data'}), 400
-
-# Route to mark a user as offline
-@app.route('/mark-offline', methods=['POST'])
-def mark_offline():
-        data = request.get_json()
-        if 'username' in data:
-            if hasattr(app, 'online_users') and data['username'] in app.online_users:
-                app.online_users.remove(data['username'])
-            return jsonify({'status': 'success', 'message': f'{data["username"]} is now offline.'}), 200
-        return jsonify({'status': 'error', 'message': 'Invalid data'}), 400
-
-# Route to handle typing indicator
-@app.route('/typing', methods=['POST'])
-def typing():
-    data = request.get_json()
-    if 'username' in data:
-        username = data['username']
-        if not hasattr(app, 'typing_users'):
-            app.typing_users = set()
-        app.typing_users.add(username)
-        return jsonify({'status': 'success', 'message': f'{username} is typing...'}), 200
-    return jsonify({'status': 'error', 'message': 'Invalid data'}), 400
-
-# Route to handle stopping typing indicator
-@app.route('/stop-typing', methods=['POST'])
-def stop_typing():
-    data = request.get_json()
-    if 'username' in data:
-        username = data['username']
-        if hasattr(app, 'typing_users') and username in app.typing_users:
-            app.typing_users.remove(username)
-        return jsonify({'status': 'success', 'message': f'{username} stopped typing.'}), 200
-    return jsonify({'status': 'error', 'message': 'Invalid data'}), 400
-
-# Route to fetch typing users
-@app.route('/typing-status', methods=['GET'])
-def typing_status():
-    if not hasattr(app, 'typing_users'):
-        app.typing_users = set()
-    return jsonify({'typingUsers': list(app.typing_users)}), 200
-    # Long polling route to fetch typing status
-
-
-@app.route('/poll-typing-status', methods=['GET'])
-def poll_typing_status():
-        timeout = 30  # Maximum time to hold the request (in seconds)
-        start_time = time.time()
-        initial_typing_users = set(app.typing_users) if hasattr(app, 'typing_users') else set()
-
-        while time.time() - start_time < timeout:
-            current_typing_users = set(app.typing_users) if hasattr(app, 'typing_users') else set()
-            if current_typing_users != initial_typing_users:
-                return jsonify({'typingUsers': list(current_typing_users)}), 200
-            time.sleep(1)  # Wait for 1 second before checking again
-
-        return jsonify({'typingUsers': list(initial_typing_users)}), 200
-# Route to handle deleting a message
-@app.route('/delete-message', methods=['POST'])
-def delete_message():
-    data = request.get_json()
-    if 'id' in data:
-        with sqlite3.connect(db_file) as conn:
-            cursor = conn.cursor()
-            cursor.execute('DELETE FROM messages WHERE id = ?', (data['id'],))
+        cursor.execute('SELECT reactions FROM messages WHERE id = ?', (message_id,))
+        row = cursor.fetchone()
+        if row:
+            reactions = row[0] or ''
+            reactions += f' {reaction}'
+            cursor.execute('UPDATE messages SET reactions = ? WHERE id = ?', (reactions.strip(), message_id))
             conn.commit()
-        return jsonify({'status': 'success', 'message': 'Message deleted'}), 200
-    return jsonify({'status': 'error', 'message': 'Invalid data'}), 400
 
-# Route to handle adding a reaction to a message
-@app.route('/add-reaction', methods=['POST'])
-def add_reaction():
-    data = request.get_json()
-    if 'id' in data and 'reaction' in data:
-        with sqlite3.connect(db_file) as conn:
-            cursor = conn.cursor()
-            cursor.execute('SELECT reactions FROM messages WHERE id = ?', (data['id'],))
-            row = cursor.fetchone()
-            if row:
-                reactions = row[0] or ''
-                reactions += f' {data["reaction"]}'
-                cursor.execute('UPDATE messages SET reactions = ? WHERE id = ?', (reactions.strip(), data['id']))
-                conn.commit()
-                return jsonify({'status': 'success', 'message': 'Reaction added'}), 200
-    return jsonify({'status': 'error', 'message': 'Invalid data'}), 400
+    # Broadcast the updated reactions to all clients
+    emit('update_reactions', {'id': message_id, 'reactions': reactions.strip()}, broadcast=True)
 
-# Route to handle sending a private message
-@app.route('/send-private-message', methods=['POST'])
-def send_private_message():
-    data = request.get_json()
-    if 'username' in data and 'message' in data:
-        new_message_id = save_message_to_db(
-            private_db_file,
-            username=data['username'],
-            profilePic=data.get('profilePic', ''),
-            message=data['message'],
-            image=data.get('image', '')
-        )
-        new_message = {
-            'id': new_message_id,
-            'username': data['username'],
-            'profilePic': data.get('profilePic', ''),
-            'message': data['message'],
-            'image': data.get('image', '')
-        }
-        return jsonify({'status': 'success', 'message': new_message}), 200
-    return jsonify({'status': 'error', 'message': 'Invalid data'}), 400
+@socketio.on('join_rps')
+def handle_join_rps(data):
+        username = data.get('username')
+        print(f"{username} has joined the RPS game")
+        if username:
+            if 'rps_game' not in globals():
+                global rps_game
+                rps_game = {'players': [], 'choices': {}}
 
+            
 
+            if len(rps_game['players']) < 2:
+                rps_game['players'].append(username)
+                rps_game['choices'][username] = None
+                join_room(username)  # Ensure the user joins their own room for communication
+                if len(rps_game['players']) == 2:
+                    player1, player2 = rps_game['players']
+                    socketio.emit('rps_start', {'opponent': player2}, room=player1)
+                    socketio.emit('rps_start', {'opponent': player1}, room=player2)
+                else:
+                    emit('rps_result', {'result': 'Waiting for another player to join...'})
+            else:
+                emit('rps_result', {'result': 'Game is full. Please wait for the next round.'})
 
-# Long polling route to fetch new messages for the public chat
-@app.route('/poll-messages', methods=['GET'])
-def poll_messages():
-    last_id = request.args.get('last_id', None)
-    try:
-        if last_id is not None:
-            last_id = int(last_id)
-        timeout = 30  # Maximum time to hold the request (in seconds)
-        start_time = time.time()
-        while time.time() - start_time < timeout:
-            messages = load_messages_from_db(db_file, last_id)
-            if messages:
-                # Fetch reactions for each message
-                with sqlite3.connect(db_file) as conn:
-                    cursor = conn.cursor()
-                    for message in messages:
-                        cursor.execute('SELECT reactions FROM messages WHERE id = ?', (message['id'],))
-                        row = cursor.fetchone()
-                        message['reactions'] = row[0] if row else ''
-                return jsonify(messages)
-            time.sleep(1)  # Wait for 1 second before checking again
-        return jsonify([])  # Return an empty list if no new messages
-    except ValueError:
-        return jsonify({'status': 'error', 'message': 'Invalid last_id'}), 400
+@socketio.on('rps_choice')
+def handle_rps_choice(data):
+        username = data.get('username')
+        choice = data.get('choice')
+        if username in rps_game['players']:
+            rps_game['choices'][username] = choice
 
+            if all(rps_game['choices'].values()):
+                player1, player2 = rps_game['players']
+                choice1, choice2 = rps_game['choices'][player1], rps_game['choices'][player2]
 
+                if choice1 == choice2:
+                    result = "It's a tie!"
+                elif (choice1 == 'rock' and choice2 == 'scissors') or \
+                     (choice1 == 'scissors' and choice2 == 'paper') or \
+                     (choice1 == 'paper' and choice2 == 'rock'):
+                    result = f"{player1} wins!"
+                else:
+                    result = f"{player2} wins!"
 
-# Long polling route to fetch new messages for the private chat
-@app.route('/poll-private-messages', methods=['GET'])
-def poll_private_messages():
-    last_id = request.args.get('last_id', None)
-    try:
-        if last_id is not None:
-            last_id = int(last_id)
-        timeout = 30  # Maximum time to hold the request (in seconds)
-        start_time = time.time()
-        while time.time() - start_time < timeout:
-            messages = load_messages_from_db(private_db_file, last_id)
-            if messages:
-                return jsonify(messages)
-            time.sleep(1)  # Wait for 1 second before checking again
-        return jsonify([])  # Return an empty list if no new messages
-    except ValueError:
-        return jsonify({'status': 'error', 'message': 'Invalid last_id'}), 400
+                socketio.emit('rps_result', {'result': result}, room=player1)
+                socketio.emit('rps_result', {'result': result}, room=player2)
 
-# Run Flask App
+                # Reset the game for the next round
+                rps_game['players'] = []
+                rps_game['choices'] = {}
+
+                # Broadcast the result as a message to all clients
+                socketio.emit('send_message', jsonify({
+                    'username': 'SERVER',
+                    'profilePic': '',
+                    'message': 'The current Rock Paper Scissors game is over. You can join the next round.',
+                }))
+
+@socketio.on('broadcast_message')
+def handle_broadcast_message(data):
+    """
+    Broadcast a message to all connected clients.
+    """
+    message = data.get('message', 'Server Message')
+    username = data.get('username', 'SERVER')  # Default to 'Server' if no username is provided
+    profile_pic = data.get('profilePic', '')  # Optional profile picture
+
+    # Emit the message to all clients
+    emit('receive_message', {
+        'id': None,  # You can generate an ID if needed
+        'username': username,
+        'profilePic': profile_pic,
+        'message': message,
+        'image': None,  # No image for server messages
+        'reactions': ''
+    }, broadcast=True)
+
+@socketio.on('leave_rps')
+def handle_leave_rps(data):
+        username = data.get('username')
+        if username in rps_game['players']:
+            rps_game['players'].remove(username)
+            del rps_game['choices'][username]
+            socketio.emit('rps_result', {'result': f"{username} left the game. Game canceled."}, to='/')
+
 if __name__ == '__main__':
-    app.run(debug=True)
+    socketio.run(app, debug=True)

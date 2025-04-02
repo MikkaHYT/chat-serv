@@ -18,6 +18,28 @@
             height: 100vh;
         }
 
+        #top-buttons {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px;
+            background-color: #007BFF;
+            color: white;
+        }
+
+        #top-buttons button {
+            background-color: #0056b3;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            padding: 10px 15px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        #top-buttons button:hover {
+            background-color: #003f7f;
+        }
+
         #messages {
             flex: 1;
             overflow-y: auto;
@@ -61,14 +83,14 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(0, 0, 0, 0.5);
+            background: #1e1e1e;
             display: flex;
             justify-content: center;
             align-items: center;
         }
 
         #username-form {
-            background: white;
+            background: #2a2a2a;
             padding: 20px;
             border-radius: 5px;
             text-align: center;
@@ -107,58 +129,97 @@
             color: #007BFF;
         }
 
-        #logout-button {
-            position: absolute;
-            top: 10px;
-            right: 10px;
-            background-color: #ff4d4d;
-            color: white;
-            border: none;
-            border-radius: 5px;
-            padding: 10px 15px;
-            cursor: pointer;
-            font-weight: bold;
+        #online-users-bar {
+            position: fixed;
+            top: 50px;
+            right: 0;
+            width: 200px;
+            height: calc(100% - 50px);
+            background-color: #f1f1f1;
+            border-left: 1px solid #ccc;
+            overflow-y: auto;
+            padding: 10px;
         }
 
-        #logout-button:hover {
-            background-color: #e60000;
+        #online-users-bar h3 {
+            margin: 0 0 10px;
         }
 
-        #change-pfp-button {
-            position: absolute;
-            top: 10px;
-            right: 100px;
-            background-color: #28a745;
-            color: white;
-            border: none;
-            border-radius: 5px;
-            padding: 10px 15px;
-            cursor: pointer;
-            font-weight: bold;
+        #online-users-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
         }
 
-        #change-pfp-button:hover {
-            background-color: #218838;
+        #online-users-list li {
+            margin-bottom: 10px;
         }
 
-        #settings-button {
-            position: absolute;
-            top: 10px;
-            right: 290px;
-            background-color: #ffc107;
-            color: white;
-            border: none;
-            border-radius: 5px;
-            padding: 10px 15px;
-            cursor: pointer;
-            font-weight: bold;
+        /* Dark Mode Styles */
+        body.dark-mode {
+            background-color: #121212;
+            color: #e0e0e0;
         }
 
-        #settings-button:hover {
-            background-color: #e0a800;
+        body.dark-mode #settings-modal {
+            background: rgba(0, 0, 0, 0.8);
+            color: #e0e0e0;
         }
 
-        
+        body.dark-mode #settings-modal div {
+            background: #2a2a2a;
+            color: #e0e0e0;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.5);
+        }
+
+        body.dark-mode #settings-modal button {
+            background-color: #444;
+            color: #e0e0e0;
+            border: 1px solid #555;
+        }
+
+        body.dark-mode #settings-modal button:hover {
+            background-color: #555;
+        }
+
+        body.dark-mode #top-buttons {
+            background-color: #1f1f1f;
+        }
+
+        body.dark-mode #messages {
+            background-color: #1e1e1e;
+            border-bottom: 1px solid #333;
+        }
+
+        body.dark-mode #message-form {
+            background-color: #1f1f1f;
+            border-top: 1px solid #333;
+        }
+
+        body.dark-mode #message-input {
+            background-color: #2a2a2a;
+            color: #e0e0e0;
+            border: 1px solid #444;
+        }
+
+        body.dark-mode #send-button {
+            background-color: #333;
+            color: #e0e0e0;
+        }
+
+        body.dark-mode #send-button:hover {
+            background-color: #444;
+        }
+
+        body.dark-mode .message-content {
+            background-color: #2a2a2a;
+            color: #e0e0e0;
+        }
+
+        body.dark-mode #online-users-bar {
+            background-color: #1f1f1f;
+            border-left: 1px solid #333;
+        }
     </style>
 </head>
 <body>
@@ -170,11 +231,100 @@
             <button type="submit">Join Chat</button>
         </form>
     </div>
+    <style>
+        #username-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            animation: fadeIn 0.5s ease-in-out;
+        }
+
+        #username-form {
+            background: #2a2a2a;
+            padding: 30px;
+            border-radius: 10px;
+            text-align: center;
+            box-shadow: 0 8px 15px rgba(0, 0, 0, 0.2);
+            transform: scale(0.9);
+            animation: scaleUp 0.3s ease-in-out forwards;
+        }
+
+        #username-form h2 {
+            margin-bottom: 20px;
+            font-size: 24px;
+            color: #ffffff;
+        }
+
+        #username-form input[type="text"],
+        #username-form input[type="file"] {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 15px;
+            border: 1px solid #444;
+            border-radius: 5px;
+            font-size: 16px;
+            background-color: #1e1e1e;
+            color: #ffffff;
+            outline: none;
+            transition: border-color 0.3s ease;
+        }
+
+        #username-form input[type="text"]:focus,
+        #username-form input[type="file"]:focus {
+            border-color: #007BFF;
+        }
+
+        #username-form button {
+            background-color: #007BFF;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            padding: 10px 20px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            transition: background-color 0.3s ease, transform 0.2s ease;
+        }
+
+        #username-form button:hover {
+            background-color: #0056b3;
+            transform: scale(1.05);
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+            to {
+                opacity: 1;
+            }
+        }
+
+        @keyframes scaleUp {
+            from {
+                transform: scale(0.9);
+            }
+            to {
+                transform: scale(1);
+            }
+        }
+    </style>
 
     <div id="chat-container">
-        <button id="logout-button">Logout</button>
-        <button id="change-pfp-button">Change Profile Picture</button>
-        <button id="settings-button">Settings</button>
+        <div id="top-buttons">
+            <button id="logout-button">Logout</button>
+            <button id="settings-button">Settings</button>
+        </div>
+        <div id="online-users-bar">
+            <h3>Online Users</h3>
+            <ul id="online-users-list"></ul>
+        </div>
         <div id="messages"></div>
         <form id="message-form">
             <input type="text" id="message-input" placeholder="Type a message or paste an image..." required>
@@ -183,493 +333,273 @@
             <button type="submit" id="send-button">Send</button>
         </form>
     </div>
+
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
     <script>
-        // Prompt for a password before accessing the page
-        const passwordModal = document.createElement('div');
-        passwordModal.style.position = 'fixed';
-        passwordModal.style.top = '0';
-        passwordModal.style.left = '0';
-        passwordModal.style.width = '100%';
-        passwordModal.style.height = '100%';
-        passwordModal.style.background = 'rgba(0, 0, 0, 0.5)';
-        passwordModal.style.display = 'flex';
-        passwordModal.style.justifyContent = 'center';
-        passwordModal.style.alignItems = 'center';
-        passwordModal.style.zIndex = '1000';
+        const socket = io();
 
-        passwordModal.innerHTML = `
-            <div style="background: white; padding: 20px; border-radius: 5px; text-align: center; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
-                <h2>Enter Password</h2>
-                <p>hint, type of food + a number (e.g. pepperonipizza45) </p>
-                <input type="password" id="password-input" placeholder="Password" required style="padding: 10px; margin-bottom: 10px; width: 100%; border: 1px solid #ccc; border-radius: 5px;">
-                <button id="password-submit" style="padding: 10px 20px; background-color: #007BFF; color: white; border: none; border-radius: 5px; cursor: pointer; font-weight: bold;">Submit</button>
-            </div>
-        `;
+        const usernameModal = document.getElementById('username-modal');
+        const usernameForm = document.getElementById('username-form');
+        const chatContainer = document.getElementById('chat-container');
+        const messagesDiv = document.getElementById('messages');
+        const messageForm = document.getElementById('message-form');
+        const messageInput = document.getElementById('message-input');
+        const onlineUsersList = document.getElementById('online-users-list');
+        const imageUpload = document.getElementById('image-upload');
+        const uploadButton = document.getElementById('upload-button');
+        const logoutButton = document.getElementById('logout-button');
+        const settingsButton = document.getElementById('settings-button');
 
-        document.body.appendChild(passwordModal);
+        let username = '';
+        let profilePic = '';
 
-        document.getElementById('password-submit').addEventListener('click', () => {
-            const passwordInput = document.getElementById('password-input').value;
-            const correctPassword = 'mozarelladipper15'; // Replace with your desired password
-
-            if (passwordInput === correctPassword) {
-                document.body.removeChild(passwordModal); // Remove the password modal
+        // Handle username form submission
+        usernameForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            username = document.getElementById('username').value;
+            const fileInput = document.getElementById('profile-pic');
+            // Load dark mode setting from localStorage
+            console.log('Loading dark mode setting from localStorage...');
+            const darkModeSetting = localStorage.getItem('dark-mode');
+            if (darkModeSetting === 'enabled') {
+                document.body.classList.add('dark-mode');
+                console.log('Dark mode enabled from localStorage');
+            }
+            if (fileInput.files.length > 0) {
+                const reader = new FileReader();
+                reader.onload = () => {
+                    profilePic = reader.result;
+                    joinChat();
+                };
+                reader.readAsDataURL(fileInput.files[0]);
             } else {
-                alert('incorrect password. bye bye :)');
-                window.location.href = '/';
+                profilePic = '';
+                joinChat();
             }
         });
-        const usernameModal = document.getElementById('username-modal');
-const usernameForm = document.getElementById('username-form');
-const chatContainer = document.getElementById('chat-container');
-const messagesDiv = document.getElementById('messages');
-const messageForm = document.getElementById('message-form');
-const messageInput = document.getElementById('message-input');
-const imageUpload = document.getElementById('image-upload');
-const uploadButton = document.getElementById('upload-button');
-let username = '';
-let profilePic = '';
-let lastMessageId = -1; // Initialize to -1 to fetch all messages on first load
 
-function fetchAllMessages() {
-    console.log("Fetching all messages");
-    fetch('/get-private-messages')
-        .then((response) => response.json())
-        .then((allMessages) => {
-            messagesDiv.innerHTML = ''; // Clear the chat only when fetching all messages
-            allMessages.forEach((message) => {
-                appendMessage(message);
-                lastMessageId = Math.max(lastMessageId, message.id); // Update lastMessageId
-            });
+        // Handle page unload or logout
+        window.addEventListener('beforeunload', () => {
+            socket.emit('leave', { username });
         });
-}
 
-// Handle username form submission
-usernameForm.addEventListener('submit', (e) => {
-    e.preventDefault();
-    username = document.getElementById('username').value;
-    const fileInput = document.getElementById('profile-pic');
-    if (fileInput.files.length > 0) {
-        const reader = new FileReader();
-        reader.onload = () => {
-            profilePic = reader.result;
+        logoutButton.addEventListener('click', () => {
+            socket.emit('leave', { username });
+            location.reload(); // Reload the page to reset the chat
+        });
+
+        function joinChat() {
             usernameModal.style.display = 'none';
             chatContainer.style.display = 'flex';
-            fetchAllMessages(); // Fetch all messages when the user joins
-        };
-        reader.readAsDataURL(fileInput.files[0]);
-    } else {
-        profilePic = '';
-        usernameModal.style.display = 'none';
-        chatContainer.style.display = 'flex';
-        fetchAllMessages(); // Fetch all messages when the user joins
-    }
-});
-
-// Save user data to localStorage
-function saveUserData() {
-    const userData = { username, profilePic };
-    localStorage.setItem('chatUserData', JSON.stringify(userData));
-}
-
-// Load user data from localStorage
-function loadUserData() {
-    const userData = localStorage.getItem('chatUserData');
-    if (userData) {
-        const { username: savedUsername, profilePic: savedProfilePic } = JSON.parse(userData);
-        username = savedUsername;
-        profilePic = savedProfilePic;
-        usernameModal.style.display = 'none';
-        chatContainer.style.display = 'flex';
-        fetchAllMessages(); // Fetch all messages when user data is loaded
-    }
-}
-
-// Long polling for new messages
-function pollMessages() {
-    console.log('Polling messages');
-        fetch(`/poll-private-messages?last_id=${lastMessageId}`)
-            .then((response) => response.json())
-            .then((messages) => {
-                messages.forEach((message) => {
-                    appendMessage(message);
-                    lastMessageId = Math.max(lastMessageId, message.id);
-                });
-                pollMessages(); // Continue polling after receiving a response
-            })
-            .catch((error) => {
-                console.error('Error polling messages:', error);
-                setTimeout(pollMessages, 5000); // Retry after 5 seconds on error
-            });
-    }
-
-
-// Handle background image upload
-function handleBackgroundUpload(event) {
-        const file = event.target.files[0];
-        if (file) {
-            const reader = new FileReader();
-            reader.onload = () => {
-                const backgroundImage = reader.result;
-                document.body.style.backgroundImage = `url(${backgroundImage})`;
-                document.body.style.backgroundSize = 'cover';
-                document.body.style.backgroundRepeat = 'no-repeat';
-                localStorage.setItem('backgroundImage', backgroundImage); // Save background image to localStorage
-            };
-            reader.readAsDataURL(file);
+            socket.emit('join', { username, profilePic });
         }
-    }
 
-// Call loadUserData on page load
-window.addEventListener('DOMContentLoaded', loadUserData,);
+        // Load old messages when the page loads
+        socket.on('load_messages', (messages) => {
+            messages.forEach((message) => appendMessage(message));
+        });
 
-window.addEventListener('DOMContentLoaded', () => {
-    // Start fetching messages
-    const darkModeToggle = document.getElementById('dark-mode-toggle');
-    const isDarkMode = localStorage.getItem('darkMode') === 'true';
-    if (isDarkMode) {
-        document.body.style.backgroundColor = '#333';
-        document.body.style.color = '#fff';
-        document.querySelectorAll('*').forEach((element) => {
-            if (!['BUTTON', 'INPUT', 'TEXTAREA'].includes(element.tagName)) {
-                element.style.backgroundColor = '#333';
-                element.style.color = '#fff';
+        // Handle sending a message
+        messageForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const message = messageInput.value.trim();
+            if (message) {
+                socket.emit('send_message', { username, profilePic, message });
+                messageInput.value = ''; // Clear the input field
             }
         });
-    }
-    console.log("Running fetchAllMessages");
-    fetchAllMessages();
-    console.log("Running pollMessages");
-    pollMessages(); // Start long polling
-});
 
+        // Receive a new message
+        socket.on('receive_message', (data) => {
+            appendMessage(data);
+        });
 
-// Save user data when username form is submitted
-usernameForm.addEventListener('submit', () => {
-    saveUserData();
-});
+        // Fetch all messages from the database on login
+        socket.on('login_success', () => {
+            fetch('/api/messages')
+                .then(response => response.json())
+                .then(messages => {
+                    messages.forEach(message => appendMessage(message));
+                })
+                .catch(error => console.error('Error fetching messages:', error));
+        });
 
-// Handle message form submission
-messageForm.addEventListener('submit', (e) => {
-    e.preventDefault();
-    const message = messageInput.value;
-    if (message.trim() !== '') {
-        const messageData = { username, profilePic, message };
-        sendMessageToServer(messageData); // Send the message to the server
-        messageInput.value = '';
-    }
-});
+        // Append a message to the chat
+        function appendMessage({ username, profilePic, message, image }) {
+            const messageElement = document.createElement('div');
+            messageElement.classList.add('message');
 
+            const imageTag = image
+                ? `<img src="${image}" alt="Uploaded Image" style="width: 400px; height: auto; margin-top: 10px; border-radius: 0; border: none;">`
+                : '';
 
+            messageElement.innerHTML = `
+                <img src="${profilePic || 'https://via.placeholder.com/50'}" alt="Profile Picture">
+                <div class="message-content">
+                    <strong>${username}</strong>
+                    <p>${message}</p>
+                    ${imageTag}
+                </div>
+            `;
 
-// Handle image upload button click
-uploadButton.addEventListener('click', () => {
-    imageUpload.click(); // Trigger the hidden file input
-});
-
-// Handle pasting an image into the text box
-messageInput.addEventListener('paste', (event) => {
-    const items = event.clipboardData.items;
-    for (let i = 0; i < items.length; i++) {
-        if (items[i].type.startsWith('image/')) {
-            const file = items[i].getAsFile();
-            const reader = new FileReader();
-            reader.onload = () => {
-                const imageData = reader.result;
-                const messageData = { username, profilePic, message: '', image: imageData };
-                sendMessageToServer(messageData); // Send the base64 image data as a message to the server
-            };
-            reader.readAsDataURL(file);
-            event.preventDefault(); // Prevent the default paste behavior
-            break;
+            messagesDiv.appendChild(messageElement);
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
         }
-    }
-});
 
-// Open image in a new tab when clicked
-messagesDiv.addEventListener('click', (e) => {
-    if (e.target.tagName === 'IMG' && e.target.alt === 'Uploaded Image') {
-        const imageUrl = e.target.getAttribute('src');
-        if (imageUrl.startsWith('data:image/')) {
-            const newTab = window.open();
-            newTab.document.body.innerHTML = `<img src="${imageUrl}" style="width: 100%; height: auto;">`;
-        } else {
-            window.open(imageUrl, '_blank');
-        }
-    }
-});
+        
 
-// Handle image file selection
-imageUpload.addEventListener('change', () => {
-    const file = imageUpload.files[0];
-    if (file) {
-        const reader = new FileReader();
-        reader.onload = () => {
-            const imageData = reader.result;
-            const messageData = { username, profilePic, message: '', image: imageData };
-            sendMessageToServer(messageData); // Send the image as a message to the server
-        };
-        reader.readAsDataURL(file);
-    }
-});
+        // Mark user as online after login
+        socket.on('connect', () => {
+            socket.emit('mark_online', { username });
+        });
 
-// Handle logout button click
-document.getElementById('logout-button').addEventListener('click', () => {
-    localStorage.removeItem('chatUserData'); // Clear user data from localStorage
-    username = '';
-    profilePic = '';
-    chatContainer.style.display = 'none';
-    usernameModal.style.display = 'flex'; // Show the username modal again
-});
+        // Mark user as offline on disconnect
+        socket.on('disconnect', () => {
+            socket.emit('mark_offline', { username });
+        });
 
-// Handle settings button click
-document.getElementById('settings-button').addEventListener('click', () => {
-    const settingsModal = document.createElement('div');
-    settingsModal.style.position = 'fixed';
-    settingsModal.style.top = '0';
-    settingsModal.style.left = '0';
-    settingsModal.style.width = '100%';
-    settingsModal.style.height = '100%';
-    settingsModal.style.background = 'rgba(0, 0, 0, 0.5)';
-    settingsModal.style.display = 'flex';
-    settingsModal.style.justifyContent = 'center';
-    settingsModal.style.alignItems = 'center';
-    settingsModal.style.zIndex = '1000';
+        socket.on('user_stopped_typing', (data) => {
+            const userItem = document.querySelector(`#online-users-list li[data-username="${data.username}"]`);
+            if (userItem) {
+                userItem.textContent = data.username;
+            }
+        });
 
-    settingsModal.innerHTML = `
-        <div style="background: white; padding: 20px; border-radius: 5px; text-align: center; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
-            <h2>Settings</h2>
-            <label style="display: block; margin: 10px 0;">
+        // Update the online users list
+        socket.on('update_online_users', (users) => {
+            onlineUsersList.innerHTML = '';
+            users.forEach((user) => {
+                const userItem = document.createElement('li');
+                userItem.textContent = user.username;
+                if (user.isTyping) {
+                    userItem.textContent += ' - typing...';
+                }
+                onlineUsersList.appendChild(userItem);
+            });
+        });
+
+        // Handle typing indicator
+        let typingTimeout;
+        messageInput.addEventListener('input', () => {
+            socket.emit('typing', { username });
+            clearTimeout(typingTimeout);
+            typingTimeout = setTimeout(() => {
+                socket.emit('stop_typing', { username });
+            }, 2000);
+        });
+
+        // Emit start-typing event when user starts typing
+        messageInput.addEventListener('keydown', () => {
+            if (event.key === 'Enter') return;
+            socket.emit('start_typing', { username });
+        });
+
+        // Emit stop-typing event when user stops typing
+        messageInput.addEventListener('keyup', () => {
+            clearTimeout(typingTimeout);
+            typingTimeout = setTimeout(() => {
+                socket.emit('stop_typing', { username });
+            }, 2000);
+        });
+
+        // Handle image upload button click
+        uploadButton.addEventListener('click', () => {
+            imageUpload.click(); // Trigger the hidden file input
+        });
+
+        // Handle image file selection
+        imageUpload.addEventListener('change', () => {
+            const file = imageUpload.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = () => {
+                    const imageData = reader.result;
+                    socket.emit('send_message', { username, profilePic, message: '', image: imageData });
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+
+        // Handle pasting an image into the text box
+        messageInput.addEventListener('paste', (event) => {
+            const items = event.clipboardData.items;
+            for (let i = 0; i < items.length; i++) {
+                if (items[i].type.startsWith('image/')) {
+                    const file = items[i].getAsFile();
+                    const reader = new FileReader();
+                    reader.onload = () => {
+                        const imageData = reader.result;
+                        socket.emit('send_message', { username, profilePic, message: '', image: imageData });
+                    };
+                    reader.readAsDataURL(file);
+                    event.preventDefault(); // Prevent the default paste behavior
+                    break;
+                }
+            }
+        });
+
+        // Handle logout button click
+        logoutButton.addEventListener('click', () => {
+            socket.emit('logout', { username });
+            location.reload(); // Reload the page to reset the chat
+        });
+
+        // Handle settings button click
+        settingsButton.addEventListener('click', () => {
+            const settingsModal = document.createElement('div');
+            settingsModal.id = 'settings-modal';
+            settingsModal.style.position = 'fixed';
+            settingsModal.style.top = '0';
+            settingsModal.style.left = '0';
+            settingsModal.style.width = '100%';
+            settingsModal.style.height = '100%';
+            settingsModal.style.background = 'rgba(0, 0, 0, 0.5)';
+            settingsModal.style.display = 'flex';
+            settingsModal.style.justifyContent = 'center';
+            settingsModal.style.alignItems = 'center';
+            settingsModal.innerHTML = `
+            <div style="padding: 20px; border-radius: 5px; text-align: center; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+                <h2>Settings</h2>
+                <label>
                 <input type="checkbox" id="dark-mode-toggle">
                 Enable Dark Mode
-            </label>
-            <button id="close-settings" style="margin-top: 10px; padding: 10px 20px; background-color: #007BFF; color: white; border: none; border-radius: 5px; cursor: pointer; font-weight: bold;">Close</button>
-        </div>
-    `;
+                </label>
+                <br><br>
+                <button id="close-settings">Close</button>
+            </div>
+            `;
+            document.body.appendChild(settingsModal);
 
-    document.body.appendChild(settingsModal);
+            const darkModeToggle = document.getElementById('dark-mode-toggle');
+            darkModeToggle.checked = document.body.classList.contains('dark-mode');
 
-
-
-    // Load dark mode setting from localStorage
-    const darkModeToggle = document.getElementById('dark-mode-toggle');
-    const isDarkMode = localStorage.getItem('darkMode') === 'true';
-    darkModeToggle.checked = isDarkMode;
-    if (isDarkMode) {
-        document.body.style.backgroundColor = '#1e1e1e'; // Slightly lighter dark color
-            document.body.style.color = '#fff';
-            document.querySelectorAll('*').forEach((element) => {
-                if (!['BUTTON', 'INPUT', 'TEXTAREA'].includes(element.tagName)) {
-                    element.style.backgroundColor = '#1e1e1e';
-                    element.style.color = '#fff';
+            darkModeToggle.addEventListener('change', () => {
+                if (darkModeToggle.checked) {
+                    document.body.classList.add('dark-mode');
+                } else {
+                    document.body.classList.remove('dark-mode');
                 }
             });
-        document.querySelectorAll('.message-content').forEach((message) => {
-            message.style.backgroundColor = '#444';
-            message.style.color = '#fff';
-        });
-    }
-
-    // Update all messages when dark mode is toggled
-    darkModeToggle.addEventListener('change', () => {
-        if (darkModeToggle.checked) {
-            document.body.style.backgroundColor = '#333';
-            document.body.style.color = '#fff';
-            document.querySelectorAll('.message-content').forEach((message) => {
-                message.style.backgroundColor = '#444';
-                message.style.color = '#fff';
-            });
-            localStorage.setItem('darkMode', 'true');
-        } else {
-            document.body.style.backgroundColor = '#f9f9f9';
-            document.body.style.color = '#000';
-            document.querySelectorAll('.message-content').forEach((message) => {
-                message.style.backgroundColor = '#f1f1f1';
-                message.style.color = '#000';
-            });
-            localStorage.setItem('darkMode', 'false');
-        }
-    });
-
-    
-
-    // Load background image from localStorage on page load
-    const savedBackgroundImage = localStorage.getItem('backgroundImage');
-    if (savedBackgroundImage) {
-        document.body.style.backgroundImage = `url(${savedBackgroundImage})`;
-        document.body.style.backgroundSize = 'cover';
-        document.body.style.backgroundRepeat = 'no-repeat';
-    }
-
-    // Request notification permission
-    if (Notification.permission !== 'granted') {
-        Notification.requestPermission();
-    }
-
-    // Show browser notification for new messages
-    function showNotification({ username, message, image }) {
-        console.log('Showing notification');
-    if (Notification.permission === 'granted') {
-        const options = {
-            body: message || 'New image received',
-            icon: image || 'https://i0.wp.com/catcaresolutions.com/wp-content/uploads/2019/07/funny-wet-cat.jpg?resize=626%2C710&ssl=1', // Default icon if no image
-        };
-        new Notification(`New message from ${username}`, options);
-    }
-}
-
-// Request notification permission on page load
-if (Notification.permission !== 'granted') {
-    Notification.requestPermission();
-}
 
 
-/*    // Modify fetchNewMessages to include notifications
-function fetchNewMessages() {
-        fetch(`/get-private-messages?last_id=${lastMessageId}`)
-            .then((response) => response.json())
-            .then((newMessages) => {
-                newMessages.forEach((message) => {
-                    appendMessage(message);
-                    showNotification(message); // Show notification for each new message
-                    lastMessageId = message.id; // Update lastMessageId to the latest message ID
-                });
-            });
-    }
-*/
-    
 
-    // Handle dark mode toggle
-    darkModeToggle.addEventListener('change', () => {
-        if (darkModeToggle.checked) {
-            document.body.style.backgroundColor = '#1e1e1e'; // Slightly lighter dark color
-            document.body.style.color = '#fff';
-            document.querySelectorAll('*').forEach((element) => {
-                if (!['BUTTON', 'INPUT', 'TEXTAREA'].includes(element.tagName)) {
-                    element.style.backgroundColor = '#1e1e1e';
-                    element.style.color = '#fff';
+            // Save dark mode setting to localStorage
+            darkModeToggle.addEventListener('change', () => {
+                if (darkModeToggle.checked) {
+                    document.body.classList.add('dark-mode');
+                    localStorage.setItem('dark-mode', 'enabled');
+                } else {
+                    document.body.classList.remove('dark-mode');
+                    localStorage.setItem('dark-mode', 'disabled');
                 }
             });
-            localStorage.setItem('darkMode', 'true');
-        } else {
-            document.body.style.backgroundColor = '#f9f9f9';
-            document.body.style.color = '#000';
-            document.querySelectorAll('*').forEach((element) => {
-                element.style.backgroundColor = '';
-                element.style.color = '';
+
+            document.getElementById('close-settings').addEventListener('click', () => {
+            document.body.removeChild(settingsModal);
             });
-            localStorage.setItem('darkMode', 'false');
-        }
-    });
-
-    // Close settings modal
-    document.getElementById('close-settings').addEventListener('click', () => {
-        document.body.removeChild(settingsModal);
-    });
-});
-
-// Handle change profile picture button click
-document.getElementById('change-pfp-button').addEventListener('click', () => {
-    const fileInput = document.createElement('input');
-    fileInput.type = 'file';
-    fileInput.accept = 'image/*';
-    fileInput.addEventListener('change', () => {
-        const file = fileInput.files[0];
-        if (file) {
-            const reader = new FileReader();
-            reader.onload = () => {
-                profilePic = reader.result;
-                saveUserData(); // Save the updated profile picture
-                alert('Profile picture updated successfully!');
-            };
-            reader.readAsDataURL(file);
-        }
-    });
-    fileInput.click(); // Trigger the file input dialog
-});
-
-// Append a message to the chat
-function appendMessage({ id, username, profilePic, message, image }) {
-    // Check if the message already exists in the chat
-    if (document.querySelector(`.message[data-id="${id}"]`)) {
-        return; // Skip if the message already exists
-    }
-
-    const messageElement = document.createElement('div');
-    messageElement.classList.add('message');
-    messageElement.setAttribute('data-id', id); // Add a unique identifier to prevent duplication
-
-    const imageTag = image
-        ? `<img src="${image}" alt="Uploaded Image" style="width: 400px; height: auto; margin-top: 10px; border-radius: 0; border: none;">`
-        : '';
-
-    messageElement.innerHTML = `
-        <img src="${profilePic || 'https://i0.wp.com/catcaresolutions.com/wp-content/uploads/2019/07/funny-wet-cat.jpg?resize=626%2C710&ssl=1'}" alt="Profile Picture">
-        <div class="message-content">
-            <strong>${username}</strong>
-            ${message}
-            ${imageTag}
-        </div>
-    `;
-
-    // Apply dark mode styles if enabled
-    const isDarkMode = localStorage.getItem('darkMode') === 'true';
-    if (isDarkMode) {
-        console.log('Dark mode enabled');
-        const messageContent = messageElement.querySelector('.message-content');
-        messageContent.style.backgroundColor = '#444';
-        messageContent.style.color = '#fff';
-    }
-
-    messagesDiv.appendChild(messageElement);
-    messagesDiv.scrollTop = messagesDiv.scrollHeight;
-}
-
-// Fetch only new messages
-
-let isFetching = false; // Prevent concurrent fetches
-
-function fetchNewMessages() {
-    if (isFetching) return; // Skip if a fetch is already in progress
-    isFetching = true;
-
-    fetch(`/get-private-messages?last_id=${lastMessageId}`)
-        .then((response) => response.json())
-        .then((newMessages) => {
-            newMessages.forEach((message) => {
-                appendMessage(message);
-                lastMessageId = Math.max(lastMessageId, message.id); // Update lastMessageId
-            });
-        })
-        .finally(() => {
-            isFetching = false; // Reset the fetching flag
         });
-}
 
-/*
-// Periodically refresh the page
-setInterval(() => {
-    location.reload();
-}, 120000); // Refresh the page every 2 minutes
-*/
-
-// Send a message to the server
-function sendMessageToServer(messageData) {
-    fetch('/send-private-message', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(messageData),
-    }).then((response) => {
-        if (response.ok) {
-            fetchNewMessages(); // Fetch new messages after sending
-        }
-    });
-}
-
-
-
+        
     </script>
-
-    
 </body>
 </html>
