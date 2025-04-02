@@ -25,7 +25,8 @@ def init_db():
                 profilePic TEXT,
                 message TEXT NOT NULL,
                 image TEXT,
-                reactions TEXT
+                reactions TEXT,
+                reactions_usernames TEXT
             )
         ''')
         conn.commit()
@@ -183,16 +184,56 @@ def handle_add_reaction(data):
 
     with sqlite3.connect(db_file) as conn:
         cursor = conn.cursor()
-        cursor.execute('SELECT reactions FROM messages WHERE id = ?', (message_id,))
+        # Fetch existing reactions and reaction usernames
+        cursor.execute('SELECT reactions, reactions_usernames FROM messages WHERE id = ?', (message_id,))
         row = cursor.fetchone()
         if row:
             reactions = row[0] or ''
+            reactions_usernames = row[1] or ''
+            
+            # Append the new reaction and username
             reactions += f' {reaction}'
-            cursor.execute('UPDATE messages SET reactions = ? WHERE id = ?', (reactions.strip(), message_id))
+            reactions_usernames += f' {reaction}:{data.get("username")}'
+            
+            # Update the database with the new reactions and usernames
+            cursor.execute('UPDATE messages SET reactions = ?, reactions_usernames = ? WHERE id = ?', 
+                           (reactions.strip(), reactions_usernames.strip(), message_id))
             conn.commit()
 
     # Broadcast the updated reactions to all clients
     emit('update_reactions', {'id': message_id, 'reactions': reactions.strip()}, broadcast=True)
+
+@socketio.on('get_reaction_users')
+def handle_get_reaction_users(data):
+    """
+    Handle fetching users who reacted with a specific emoji for a message.
+    """
+    message_id = data.get('id')
+    reaction = data.get('reaction')
+
+    if message_id and reaction:
+        with sqlite3.connect(db_file) as conn:
+            cursor = conn.cursor()
+            # Fetch existing reactions and reaction usernames
+            cursor.execute('SELECT reactions_usernames FROM messages WHERE id = ?', (message_id,))
+            row = cursor.fetchone()
+            if row:
+                reactions_usernames = row[0] or ''
+                # Parse the reactions_usernames to extract all reactions and their associated users
+                reaction_details = {}
+                for entry in reactions_usernames.split():
+                    emoji, user = entry.split(':')
+                    if emoji not in reaction_details:
+                        reaction_details[emoji] = []
+                    reaction_details[emoji].append(user)
+                print(reaction_details)
+            else:
+                reaction_details = {}
+
+        emit('reaction_users', {
+            'id': message_id,
+            'reaction_details': reaction_details
+        }, room=request.sid)
 
 @socketio.on('join_rps')
 def handle_join_rps(data):
@@ -278,6 +319,15 @@ def handle_leave_rps(data):
             rps_game['players'].remove(username)
             del rps_game['choices'][username]
             socketio.emit('rps_result', {'result': f"{username} left the game. Game canceled."}, to='/')
+
+# Mute and Unmute
+@socketio.on('mute_user')
+def handle_mute_user(data):
+    username = data.get('username')
+    if username:
+        print(f"{username} has been muted")
+        # Broadcast to all clients that the user is muted
+        emit('user_muted', {'username': username}, broadcast=True)
 
 if __name__ == '__main__':
     socketio.run(app, debug=True)

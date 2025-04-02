@@ -131,10 +131,10 @@
 
         #online-users-bar {
             position: fixed;
-            top: 50px;
+            top: 57px;
             right: 0;
             width: 200px;
-            height: calc(100% - 50px);
+            height: calc(100% - 138px);
             background-color: #f1f1f1;
             border-left: 1px solid #ccc;
             overflow-y: auto;
@@ -153,6 +153,27 @@
 
         #online-users-list li {
             margin-bottom: 10px;
+        }
+
+        #settings-modal {
+            background: rgba(255, 255, 255, 0.9);
+            color: #333;
+        }
+
+        #settings-modal div {
+            background: #ffffff;
+            color: #333;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        #settings-modal button {
+            background-color: #f1f1f1;
+            color: #333;
+            border: 1px solid #ccc;
+        }
+
+        #settings-modal button:hover {
+            background-color: #e0e0e0;
         }
 
         /* Dark Mode Styles */
@@ -268,6 +289,46 @@
             font-size: 14px;
             color: #555;
         }
+
+        /* Dark Mode Styles for Rock-Paper-Scissors */
+        body.dark-mode #rps-modal {
+            background: rgba(0, 0, 0, 0.8);
+        }
+
+        body.dark-mode #rps-modal div {
+            background: #2a2a2a;
+            color: #e0e0e0;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.5);
+            border: 1px solid #555; /* Ensure border matches dark mode */
+        }
+
+        body.dark-mode #rps-modal button {
+            background-color: #444;
+            color: #e0e0e0;
+            border: 1px solid #555;
+        }
+
+        body.dark-mode #rps-modal button:hover {
+            background-color: #555;
+        }
+
+        body.dark-mode #rps-box {
+            background: #2a2a2a;
+            color: #e0e0e0;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.5);
+        }
+
+        
+
+        body.dark-mode #rps-box button {
+            background-color: #444;
+            color: #e0e0e0;
+            border: 1px solid #555;
+        }
+
+        body.dark-mode #rps-box button:hover {
+            background-color: #555;
+        }
     </style>
 </head>
 <body>
@@ -365,10 +426,12 @@
     </style>
 
     <div id="chat-container">
+
         <div id="top-buttons">
             <button id="logout-button">Logout</button>
+            <button id="settings-button">Settings</button>
             <div class="dropdown">
-                <button class="dropdown-button">Options</button>
+                <button class="dropdown-button">Extras</button>
                 <div class="dropdown-content">
                     <button id="game-button">Rock-Paper-Scissors</button>
                     <button id="superhot-button" onclick="window.location.href='/sh'">SUPERHOT</button>
@@ -390,6 +453,7 @@
                     padding: 20px 15px;
                     cursor: pointer;
                     font-weight: bold;
+                    margin-left: 30px;
                 }
 
                 .dropdown-button:hover {
@@ -424,7 +488,6 @@
                     display: block;
                 }
             </style>
-            <button id="settings-button">Settings</button>
         </div>
         <div id="online-users-bar">
             <h3>Online Users</h3>
@@ -432,17 +495,90 @@
         </div>
         <div id="messages"></div>
         <form id="message-form">
+            <button id="gif-button" type="button" style="margin-right: 10px; padding: 10px; background-color: var(--gif-button-bg, #007BFF); color: white; border: none; border-radius: 5px; cursor: pointer; font-weight: bold;">GIF</button>
+            <style>
+                body.dark-mode #gif-button {
+                    --gif-button-bg: #333;
+                }
+                #gif-button {
+                    --gif-button-bg: #007BFF;
+                }
+            </style>
             <input type="text" id="message-input" placeholder="Type a message or paste an image..." required>
             <input type="file" id="image-upload" accept="image/*" style="display: none;">
-            <button type="button" id="upload-button">📷</button>
+            <button type="button" id="upload-button" style="margin-right: 10px; padding: 10px 20px; background-color: var(--upload-button-bg, #007BFF); color: white; border: none; border-radius: 5px; cursor: pointer; font-weight: bold;">📷</button>
+            <style>
+                body.dark-mode #upload-button {
+                    --upload-button-bg: #333;
+                }
+                #upload-button {
+                    --upload-button-bg: #007BFF;
+                }
+            </style>
             <button type="submit" id="send-button">Send</button>
         </form>
     </div>
+    <div id="gif-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.5); z-index: 1000; justify-content: center; align-items: center;">
+        <div style="background: white; padding: 20px; border-radius: 10px; width: 80%; max-width: 600px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
 
     <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
     <script>
         const socket = io();
+        // Handle GIF button click
+        const gifButton = document.getElementById('gif-button');
+        const gifModal = document.getElementById('gif-modal');
 
+        gifButton.addEventListener('click', () => {
+            gifModal.style.display = 'flex';
+        });
+
+        // Add GIF search functionality
+        gifModal.innerHTML = `
+            <div style="background: white; padding: 20px; border-radius: 10px; width: 80%; max-width: 600px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+            <h2>Search GIFs</h2>
+            <input type="text" id="gif-search-input" placeholder="Search for GIFs..." style="width: 100%; padding: 10px; margin-bottom: 10px; border: 1px solid #ccc; border-radius: 5px;">
+            <div id="gif-results" style="display: flex; flex-wrap: wrap; gap: 10px; max-height: 300px; overflow-y: auto;"></div>
+            <button id="close-gif-modal" style="margin-top: 10px; padding: 10px 20px; background-color: #444; color: white; border: none; border-radius: 5px; cursor: pointer; font-weight: bold;">Close</button>
+            </div>
+        `;
+
+        const gifSearchInput = document.getElementById('gif-search-input');
+        const gifResults = document.getElementById('gif-results');
+        const closeGifModal = document.getElementById('close-gif-modal');
+
+        gifSearchInput.addEventListener('input', async () => {
+            const query = gifSearchInput.value.trim();
+            if (query) {
+            let response;
+            try {
+                response = await fetch(`https://api.giphy.com/v1/gifs/search?api_key=SzAhImfXJkuLaI0OXFUR7B0hrFo3LLBT&q=${query}&limit=15`);
+                if (!response.ok) throw new Error('Primary API key failed');
+            } catch (error) {
+                console.warn('Primary API key failed, switching to backup key:', error);
+                response = await fetch(`https://api.giphy.com/v1/gifs/search?api_key=QruKaq2SEEOJVf82Pw5Cj4zDANDdYGDW&q=${query}&limit=15`);
+            }
+            const data = await response.json();
+            gifResults.innerHTML = '';
+            data.data.forEach((gif) => {
+                const gifImg = document.createElement('img');
+                gifImg.src = gif.images.fixed_height.url;
+                gifImg.style.cursor = 'pointer';
+                gifImg.style.width = '100px';
+                gifImg.style.height = '100px';
+                gifImg.style.objectFit = 'cover';
+                gifImg.addEventListener('click', () => {
+                socket.emit('send_message', { username, profilePic, message: '', image: gif.images.fixed_height.url });
+                gifModal.style.display = 'none';
+                });
+                gifResults.appendChild(gifImg);
+            });
+            }
+        });
+
+        closeGifModal.addEventListener('click', () => {
+            gifModal.style.display = 'none';
+        });
+    
         const usernameModal = document.getElementById('username-modal');
         const usernameForm = document.getElementById('username-form');
         const chatContainer = document.getElementById('chat-container');
@@ -475,6 +611,7 @@
                 username = savedUsername;
                 profilePic = savedProfilePic || '';
                 joinChat();
+
             } else {
                 usernameModal.style.display = 'flex';
             }
@@ -493,6 +630,7 @@
                     localStorage.setItem('username', username);
                     localStorage.setItem('profilePic', profilePic);
                     joinChat();
+                    
                 };
                 reader.readAsDataURL(fileInput.files[0]);
             } else {
@@ -531,15 +669,455 @@
             //location.reload(); // Reload the page to reset the chat
         });
 
+        // Add muted users modal
+        const mutedUsersModal = document.createElement('div');
+            mutedUsersModal.id = 'muted-users-modal';
+            mutedUsersModal.style.position = 'fixed';
+            mutedUsersModal.style.bottom = '10px';
+            mutedUsersModal.style.right = '20px'; // Adjusted to appear further to the right
+            mutedUsersModal.style.background = '#2a2a2a'; // Same color as the online-users box
+            mutedUsersModal.style.border = '1px solid #ccc';
+            mutedUsersModal.style.padding = '10px';
+            mutedUsersModal.style.borderRadius = '5px';
+            mutedUsersModal.style.boxShadow = '0 4px 6px rgba(0, 0, 0, 0.1)';
+            mutedUsersModal.style.zIndex = '1000';
+            mutedUsersModal.style.display = 'none'; // Always visible
+            mutedUsersModal.innerHTML = `
+                <h4>Muted Users</h4>
+                <ul id="muted-users-list" style="list-style: none; padding: 0; margin: 0;"></ul>
+            `;
+        document.body.appendChild(mutedUsersModal);
+
+        
+
+        // Handle profile picture click
+        messagesDiv.addEventListener('click', (e) => {
+            if (e.target.tagName === 'IMG' && e.target.parentElement.classList.contains('message')) {
+            const userProfilePic = e.target;
+            const username = userProfilePic.nextElementSibling.querySelector('strong').textContent;
+
+            // Create the modal
+            const profileModal = document.createElement('div');
+            profileModal.style.position = 'absolute';
+            profileModal.style.background = '#fff';
+            profileModal.style.border = '1px solid #ccc';
+            profileModal.style.padding = '10px';
+            profileModal.style.borderRadius = '5px';
+            profileModal.style.boxShadow = '0 4px 6px rgba(0, 0, 0, 0.1)';
+            profileModal.style.zIndex = '1000';
+
+            // Add buttons to the modal
+            profileModal.innerHTML = `
+                <button id="mute-button">Mute</button>
+                <button id="dm-button">Direct Message</button>
+                <button id="tag-button">Tag</button>
+            `;
+
+            document.body.appendChild(profileModal);
+
+            // Position the modal next to the profile picture
+            const rect = userProfilePic.getBoundingClientRect();
+            profileModal.style.top = `${rect.bottom + window.scrollY}px`;
+            profileModal.style.left = `${rect.left + window.scrollX}px`;
+
+            // Add event listeners for the buttons
+            document.getElementById('mute-button').addEventListener('click', () => {
+                alert(`Muted ${username}`);
+                document.body.removeChild(profileModal);
+                // Mute the user
+                socket.emit('mute_user', { username });
+
+                // Remove their previous messages from the chat
+                const userMessages = document.querySelectorAll(`.message strong`);
+                userMessages.forEach((message) => {
+                    if (message.textContent === username) {
+                        message.closest('.message').remove();
+                    }
+                });
+
+                // Add the user to a muted list
+                let mutedUsers = JSON.parse(localStorage.getItem('mutedUsers')) || [];
+                if (!mutedUsers.includes(username)) {
+                    mutedUsers.push(username);
+                    localStorage.setItem('mutedUsers', JSON.stringify(mutedUsers));
+                }
+
+                // Prevent future messages from muted users from being displayed
+                socket.on('receive_message', (data) => {
+                    if (!mutedUsers.includes(data.username)) {
+                        appendMessage(data);
+                    }
+                });
+            });
+
+            
+
+            // Function to update the muted users list
+            function updateMutedUsersList() {
+                alert("The mute function is sort of broken, but basically if it does break (and this goes for anything) just refresh the page.")
+                mutedUsersModal.style.display = 'block';
+                const mutedUsersList = document.getElementById('muted-users-list');
+                mutedUsersList.innerHTML = '';
+                const mutedUsers = JSON.parse(localStorage.getItem('mutedUsers')) || [];
+                mutedUsers.forEach((mutedUser) => {
+                    const userItem = document.createElement('li');
+                    userItem.textContent = mutedUser;
+                    userItem.style.cursor = 'pointer';
+                    userItem.style.color = '#007BFF';
+                    userItem.style.marginBottom = '5px';
+                    userItem.addEventListener('click', () => {
+                        // Unmute the user
+                        mutedUsers.splice(mutedUsers.indexOf(mutedUser), 1);
+                        localStorage.setItem('mutedUsers', JSON.stringify(mutedUsers));
+                        updateMutedUsersList();
+                        alert(`${mutedUser} has been unmuted.`);
+                    });
+                    mutedUsersList.appendChild(userItem);
+                });
+
+                
+
+                // Save muted user to localStorage when the user is muted
+                socket.on('receive_message', (data) => {
+                    const mutedUsers = JSON.parse(localStorage.getItem('mutedUsers')) || [];
+                    if (!mutedUsers.includes(data.username)) {
+                        appendMessage(data);
+                    }
+                });
+
+                document.getElementById('mute-button').addEventListener('click', () => {
+                    const mutedUsers = JSON.parse(localStorage.getItem('mutedUsers')) || [];
+                    if (!mutedUsers.includes(username)) {
+                        mutedUsers.push(username);
+                        localStorage.setItem('mutedUsers', JSON.stringify(mutedUsers));
+                        updateMutedUsersList();
+                    }
+                });
+
+                
+
+
+            }
+
+            
+
+            document.getElementById('dm-button').addEventListener('click', () => {
+                alert(`Direct messaging ${username}`);
+                document.body.removeChild(profileModal);
+            });
+
+            document.getElementById('tag-button').addEventListener('click', () => {
+                messageInput.value += `@${username} `;
+                messageInput.focus();
+                document.body.removeChild(profileModal);
+            });
+
+            // Close the modal if clicked outside
+            const closeModal = (event) => {
+                if (!profileModal.contains(event.target) && event.target !== userProfilePic) {
+                document.body.removeChild(profileModal);
+                document.removeEventListener('click', closeModal);
+                }
+            };
+
+            setTimeout(() => {
+                document.addEventListener('click', closeModal);
+            }, 0); // Delay to prevent immediate closure when clicking the profile picture
+            }
+
+            
+        });
+
+        function handleMutedUsersOnJoin() {
+            try {
+            console.log('Fetching muted users from localStorage...');
+            const mutedUsers = JSON.parse(localStorage.getItem('mutedUsers')) || [];
+            console.log('Muted users:', mutedUsers);
+
+            // Prevent future messages from muted users from being displayed
+            socket.on('receive_message', (data) => {
+                try {
+                if (!mutedUsers.includes(data.username)) {
+                    appendMessage(data);
+                } else {
+                    console.log(`Message from muted user ${data.username} ignored.`);
+                }
+                } catch (error) {
+                console.error('Error handling received message:', error);
+                }
+            });
+
+            // Update the muted users list in the UI
+            console.log('Updating muted users list in the UI...');
+            const mutedUsersList = document.getElementById('muted-users-list');
+            mutedUsersList.innerHTML = '';
+            mutedUsers.forEach((mutedUser) => {
+                try {
+                mutedUsersModal.style.display = 'block';
+                const userItem = document.createElement('li');
+                userItem.textContent = mutedUser;
+                userItem.style.cursor = 'pointer';
+                userItem.style.color = '#007BFF';
+                userItem.style.marginBottom = '5px';
+                userItem.addEventListener('click', () => {
+                    try {
+                    console.log(`Unmuting user: ${mutedUser}`);
+                    mutedUsers.splice(mutedUsers.indexOf(mutedUser), 1);
+                    localStorage.setItem('mutedUsers', JSON.stringify(mutedUsers));
+                    handleMutedUsersOnJoin();
+                    alert(`${mutedUser} has been unmuted.`);
+                    } catch (error) {
+                    console.error('Error unmuting user:', error);
+                    }
+                });
+                mutedUsersList.appendChild(userItem);
+                } catch (error) {
+                console.error('Error updating muted users list item:', error);
+                }
+            });
+
+            console.log('Removing previous messages from muted users...');
+                mutedUsers.forEach((mutedUser) => {
+                    try {
+                        const userMessages = document.querySelectorAll(`.message-content strong`);
+                        userMessages.forEach((message) => {
+                            if (message.textContent === mutedUser) {
+                                const messageElement = message.closest('.message');
+                                if (messageElement) {
+                                    messageElement.remove();
+                                    console.log(`Removed message from muted user: ${mutedUser}`);
+                                }
+                            }
+                        });
+                    } catch (error) {
+                        console.error('Error removing messages from muted user:', error);
+                    }
+                });
+            } catch (error) {
+                console.error('Error in handleMutedUsersOnJoin: An unexpected error occurred.', error);
+            }
+        }
+
         function joinChat() {
             usernameModal.style.display = 'none';
             chatContainer.style.display = 'flex';
             socket.emit('join', { username, profilePic });
+            console.log(`updating muted users.`);
+            handleMutedUsersOnJoin();
+            
+        }
+
+        // Temporary storage for muted users' messages
+        const mutedMessages = (() => {
+            try {
+                const data = localStorage.getItem('mutedMessages');
+                return data ? JSON.parse(data) : {};
+            } catch (error) {
+                console.error('Error parsing mutedMessages from localStorage:', error);
+                localStorage.removeItem('mutedMessages'); // Clear corrupted data
+                return {}; // Return an empty object as fallback
+            }
+        })();
+
+        // Load old messages when the page loads
+        socket.on('load_messages', (messages) => {
+            const mutedUsers = JSON.parse(localStorage.getItem('mutedUsers')) || [];
+            messages.forEach((message) => {
+                if (mutedUsers.includes(message.username)) {
+                    // Store muted messages persistently
+                    if (!mutedMessages[message.username]) mutedMessages[message.username] = [];
+                    mutedMessages[message.username].push(message);
+                } else {
+                    appendMessage(message);
+                }
+            });
+            localStorage.setItem('mutedMessages', JSON.stringify(mutedMessages)); // Save muted messages
+        });
+
+        // Function to mute a user
+        function muteUser(username) {
+            let mutedUsers = JSON.parse(localStorage.getItem('mutedUsers')) || [];
+            if (!mutedUsers.includes(username)) {
+                mutedUsers.push(username);
+                localStorage.setItem('mutedUsers', JSON.stringify(mutedUsers));
+                updateMutedUsersList();
+            }
+
+            // Remove their messages from the chat
+            const userMessages = document.querySelectorAll(`.message-content strong`);
+            userMessages.forEach((message) => {
+                if (message.textContent === username) {
+                    const messageElement = message.closest('.message');
+                    if (messageElement) {
+                        // Store the message persistently
+                        if (!mutedMessages[username]) mutedMessages[username] = [];
+                        mutedMessages[username].push({
+                            id: messageElement.dataset.id,
+                            username,
+                            profilePic: messageElement.querySelector('img').src,
+                            message: messageElement.querySelector('p').textContent,
+                            reactions: messageElement.querySelector('.reactions').textContent,
+                        });
+                        messageElement.remove();
+                    }
+                }
+            });
+            localStorage.setItem('mutedMessages', JSON.stringify(mutedMessages)); // Save muted messages
+        }
+
+        // Function to unmute a user
+        function unmuteUser(username) {
+            let mutedUsers = JSON.parse(localStorage.getItem('mutedUsers')) || [];
+            mutedUsers = mutedUsers.filter((user) => user !== username);
+            localStorage.setItem('mutedUsers', JSON.stringify(mutedUsers));
+            updateMutedUsersList();
+
+            // Bring back their messages
+            if (mutedMessages[username]) {
+                mutedMessages[username].forEach((message) => appendMessage(message));
+                delete mutedMessages[username]; // Clear stored messages for the user
+                localStorage.setItem('mutedMessages', JSON.stringify(mutedMessages)); // Update storage
+            }
+        }
+
+        // Function to update the muted users list
+        function updateMutedUsersList() {
+            const mutedUsersList = document.getElementById('muted-users-list');
+            mutedUsersList.innerHTML = '';
+            const mutedUsers = JSON.parse(localStorage.getItem('mutedUsers')) || [];
+            mutedUsers.forEach((mutedUser) => {
+                const userItem = document.createElement('li');
+                userItem.textContent = mutedUser;
+                userItem.style.cursor = 'pointer';
+                userItem.style.color = '#007BFF';
+                userItem.style.marginBottom = '5px';
+                userItem.addEventListener('click', () => {
+                    unmuteUser(mutedUser);
+                    alert(`${mutedUser} has been unmuted.`);
+                });
+                mutedUsersList.appendChild(userItem);
+            });
+        }
+
+        // Handle profile picture click for muting
+        messagesDiv.addEventListener('click', (e) => {
+            if (e.target.tagName === 'IMG' && e.target.parentElement.classList.contains('message')) {
+                const userProfilePic = e.target;
+                const username = userProfilePic.nextElementSibling.querySelector('strong').textContent;
+
+                // Create the modal
+                const profileModal = document.createElement('div');
+                profileModal.style.position = 'absolute';
+                profileModal.style.background = '#fff';
+                profileModal.style.border = '1px solid #ccc';
+                profileModal.style.padding = '10px';
+                profileModal.style.borderRadius = '5px';
+                profileModal.style.boxShadow = '0 4px 6px rgba(0, 0, 0, 0.1)';
+                profileModal.style.zIndex = '1000';
+
+                // Add buttons to the modal
+                profileModal.innerHTML = `
+                    <button id="mute-button">Mute</button>
+                    <button id="dm-button">Direct Message</button>
+                    <button id="tag-button">Tag</button>
+                `;
+
+                document.body.appendChild(profileModal);
+
+                // Position the modal next to the profile picture
+                const rect = userProfilePic.getBoundingClientRect();
+                profileModal.style.top = `${rect.bottom + window.scrollY}px`;
+                profileModal.style.left = `${rect.left + window.scrollX}px`;
+
+                // Add event listeners for the buttons
+                profileModal.querySelector('#mute-button').addEventListener('click', () => {
+                    const proceed = confirm(
+                        "Warning: The mute function is currently broken and may not work as expected. Do you want to continue?"
+                    );
+                    if (proceed) {
+                        muteUser(username); // Call the muteUser function
+                        alert(`Muted ${username}`);
+                    }
+                    document.body.removeChild(profileModal);
+                });
+
+                profileModal.querySelector('#dm-button').addEventListener('click', () => {
+                    alert(`Direct messaging ${username}`);
+                    document.body.removeChild(profileModal);
+                });
+
+                profileModal.querySelector('#tag-button').addEventListener('click', () => {
+                    messageInput.value += `@${username} `;
+                    messageInput.focus();
+                    document.body.removeChild(profileModal);
+                });
+
+                // Close the modal if clicked outside
+                const closeModal = (event) => {
+                    if (!profileModal.contains(event.target) && event.target !== userProfilePic) {
+                        document.body.removeChild(profileModal);
+                        document.removeEventListener('click', closeModal);
+                    }
+                };
+
+                setTimeout(() => {
+                    document.addEventListener('click', closeModal);
+                }, 0); // Delay to prevent immediate closure when clicking the profile picture
+            }
+        });
+
+        // Load old messages when the page loads
+        socket.on('load_messages', (messages) => {
+            const mutedUsers = JSON.parse(localStorage.getItem('mutedUsers')) || [];
+            messages.forEach((message) => {
+                if (mutedUsers.includes(message.username)) {
+                    // Store muted messages persistently
+                    if (!mutedMessages[message.username]) mutedMessages[message.username] = [];
+                    mutedMessages[message.username].push(message);
+                } else {
+                    appendMessage(message);
+                }
+            });
+            localStorage.setItem('mutedMessages', JSON.stringify(mutedMessages)); // Save muted messages
+        });
+
+        // Function to update the muted users list
+        function updateMutedUsersList() {
+            const mutedUsersList = document.getElementById('muted-users-list');
+            mutedUsersList.innerHTML = '';
+            const mutedUsers = JSON.parse(localStorage.getItem('mutedUsers')) || [];
+            mutedUsers.forEach((mutedUser) => {
+                const userItem = document.createElement('li');
+                userItem.textContent = mutedUser;
+                userItem.style.cursor = 'pointer';
+                userItem.style.color = '#007BFF';
+                userItem.style.marginBottom = '5px';
+                userItem.addEventListener('click', () => {
+                    // Unmute the user
+                    mutedUsers.splice(mutedUsers.indexOf(mutedUser), 1);
+                    localStorage.setItem('mutedUsers', JSON.stringify(mutedUsers));
+                    updateMutedUsersList();
+                    alert(
+                        "Warning: Unmuting this user may cause messages to reappear broken. Refresh the page to fix any issues."
+                    );
+                    alert(`${mutedUser} has been unmuted.`);
+
+                    // Bring back their messages
+                    if (mutedMessages[mutedUser]) {
+                        mutedMessages[mutedUser].forEach((message) => appendMessage(message));
+                        delete mutedMessages[mutedUser]; // Clear stored messages for the user
+                    }
+                });
+                mutedUsersList.appendChild(userItem);
+            });
         }
 
         // Load old messages when the page loads
         socket.on('load_messages', (messages) => {
-            messages.forEach((message) => appendMessage(message));
+            const mutedUsers = JSON.parse(localStorage.getItem('mutedUsers')) || [];
+            messages
+                .filter((message) => !mutedUsers.includes(message.username)) // Exclude messages from muted users
+                .forEach((message) => appendMessage(message));
         });
 
         // Handle sending a message
@@ -552,10 +1130,6 @@
             }
         });
 
-        // Receive a new message
-        socket.on('receive_message', (data) => {
-            appendMessage(data);
-        });
 
         // Fetch all messages from the database on login
         socket.on('login_success', () => {
@@ -596,6 +1170,21 @@
 
             messagesDiv.appendChild(messageElement);
             messagesDiv.scrollTop = messagesDiv.scrollHeight;
+            // Highlight the message if it contains a tag for the current user
+            if (message.includes(`@${username}`)) {
+                const messageElement = messagesDiv.querySelector(`.message[data-id="${id}"]`);
+                if (messageElement) {
+                    const messageBox = messageElement.querySelector('.message-content');
+                    if (messageBox) {
+                        messageBox.style.boxShadow = '0 0 10px 2px #ffeb3b'; // Add a glowing yellow highlight
+                        messageBox.style.transition = 'box-shadow 0.3s ease-in-out'; // Smooth transition
+                    }
+                    setTimeout(() => {
+                        messageBox.style.transition = 'box-shadow 0.4s ease-in-out'; // Smooth transition
+                        messageBox.style.boxShadow = ''; // Remove highlight after 6 seconds
+                    }, 6000);
+                }
+            }
         }
 
         // Handle reaction button click
@@ -621,7 +1210,7 @@
                     emojiButton.style.cursor = 'pointer';
                     emojiButton.style.margin = '5px';
                     emojiButton.addEventListener('click', () => {
-                        socket.emit('add_reaction', { id: messageId, reaction: emoji });
+                        socket.emit('add_reaction', { id: messageId, reaction: emoji, username });
                         document.body.removeChild(emojiPicker);
                     });
                     emojiPicker.appendChild(emojiButton);
@@ -640,9 +1229,7 @@
                         document.body.removeChild(emojiPicker);
                     }
                 }, { once: true });
-                if (reaction) {
-                    socket.emit('add_reaction', { id: messageId, reaction });
-                }
+
             }
         });
 
@@ -672,10 +1259,84 @@
         socket.on('update_reactions', (data) => {
             const messageElement = document.querySelector(`.message[data-id="${data.id}"]`);
             if (messageElement) {
-                const reactionsDiv = messageElement.querySelector('.reactions');
-                reactionsDiv.textContent = data.reactions;
+            const reactionsDiv = messageElement.querySelector('.reactions');
+            reactionsDiv.innerHTML = ''; // Clear existing reactions
+            Object.entries(data.reactions).forEach(([emoji, count]) => {
+                const reactionDiv = document.createElement('div');
+                reactionDiv.style.display = 'inline-block';
+                reactionDiv.style.marginRight = '10px';
+                reactionDiv.style.cursor = 'pointer';
+                reactionDiv.textContent = `${emoji} ${count}`;
+                reactionsDiv.appendChild(reactionDiv);
+            });
             }
         });
+
+        // Handle reaction click to show who reacted
+    messagesDiv.addEventListener('click', (e) => {
+        if (e.target.classList.contains('reactions')) {
+        console.log("Clicked on reactions div");
+        const messageId = e.target.closest('.message').dataset.id;
+        const clickedEmoji = e.target.textContent.trim(); // Get the clicked emoji
+
+        console.log(`Fetching users who reacted with "${clickedEmoji}" for message ID: ${messageId}`);
+
+        // Request the list of users who reacted with the specific emoji
+        socket.emit('get_reaction_users', { id: messageId, reaction: clickedEmoji });
+        }
+    });
+
+// Listen for the server response with the list of users (register only once)
+socket.on('reaction_users', (data) => {
+    try {
+        console.log(`Received reaction users for message ID: ${data.id}`);
+        const reactionModal = document.createElement('div');
+        reactionModal.style.position = 'fixed';
+        reactionModal.style.top = '0';
+        reactionModal.style.left = '0';
+        reactionModal.style.width = '100%';
+        reactionModal.style.height = '100%';
+        reactionModal.style.background = 'rgba(0, 0, 0, 0.5)';
+        reactionModal.style.display = 'flex';
+        reactionModal.style.justifyContent = 'center';
+        reactionModal.style.alignItems = 'center';
+        if (document.body.classList.contains('dark-mode')) {
+            reactionModal.style.background = 'rgba(0, 0, 0, 0.8)';
+            const reactionContent = reactionModal.querySelector('div');
+            if (reactionContent) {
+                reactionContent.style.background = '#2a2a2a';
+                reactionContent.style.color = '#e0e0e0';
+                reactionContent.style.boxShadow = '0 4px 6px rgba(0, 0, 0, 0.5)';
+            }
+        }
+
+        const reactionDetails = data.reaction_details;
+        const reactionList = Object.entries(reactionDetails)
+            .map(([emoji, users]) => `
+                <li>
+                    <strong>${emoji}</strong>: ${users.join(', ')}
+                </li>
+            `)
+            .join('');
+
+        reactionModal.innerHTML = `
+            <div style="background: ${document.body.classList.contains('dark-mode') ? '#2a2a2a' : 'white'}; padding: 20px; border-radius: 10px; text-align: center; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+                <h2 style="color: ${document.body.classList.contains('dark-mode') ? '#e0e0e0' : 'black'};">Reactions for Message</h2>
+                <ul style="list-style: none; padding: 0; color: ${document.body.classList.contains('dark-mode') ? '#e0e0e0' : 'black'};">
+                    ${reactionList}
+                </ul>
+                <button id="close-reaction-modal" style="margin-top: 10px; padding: 10px 20px; background-color: ${document.body.classList.contains('dark-mode') ? '#444' : '#444'}; color: white; border: none; border-radius: 5px; cursor: pointer; font-weight: bold;">Close</button>
+            </div>
+        `;
+        document.body.appendChild(reactionModal);
+
+        document.getElementById('close-reaction-modal').addEventListener('click', () => {
+            document.body.removeChild(reactionModal);
+        });
+    } catch (error) {
+        console.error("Error processing reaction users response:", error);
+    }
+});
 
         // Update a message after editing
         socket.on('update_message', (data) => {
@@ -809,7 +1470,7 @@
                 rpsModal.style.justifyContent = 'center';
                 rpsModal.style.alignItems = 'center';
                 rpsModal.innerHTML = `
-                <div style="padding: 20px; border-radius: 5px; text-align: center; background: #fff; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+                <div id="rps-box" style="padding: 20px; border-radius: 5px; text-align: center; background: var(--rps-background, #ffffff); box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
                     <h2>Rock Paper Scissors</h2>
                     <p></p>
                     <div id="rps-options" style="display: none;">
@@ -820,6 +1481,14 @@
                     <p id="rps-result"></p>
                     <button id="close-rps">Close</button>
                 </div>
+                <style>
+                    body.dark-mode #rps-box {
+                        --rps-background: #2a2a2a;
+                    }
+                    #rps-box {
+                        --rps-background: #ffffff;
+                    }
+                </style>
                 `;
                 document.body.appendChild(rpsModal);
 
@@ -889,7 +1558,21 @@
                 }
             });
 
-       
+            // Add the event listener directly to messagesDiv
+            messagesDiv.addEventListener('click', (e) => {
+                if (e.target.tagName === 'IMG' && e.target.parentElement.classList.contains('message-content')) {
+                    console.log('Image clicked:', e.target.src);
+                    const imageUrl = e.target.src;
+                    window.open(imageUrl, '_blank');
+                }
+            });
+
+            messageInput.addEventListener('keydown', (event) => {
+                if (event.key === 'Enter') {
+                    clearTimeout(typingTimeout);
+                    socket.emit('stop_typing', { username });
+                }
+            });
 
 
 
@@ -909,6 +1592,11 @@
             });
         });
 
+        
+
+
+
+        
         
     </script>
 </body>
