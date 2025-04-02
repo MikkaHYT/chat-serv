@@ -25,8 +25,7 @@ def init_db():
                 profilePic TEXT,
                 message TEXT NOT NULL,
                 image TEXT,
-                reactions TEXT,
-                reactions_usernames TEXT
+                reactions TEXT
             )
         ''')
         conn.commit()
@@ -167,6 +166,12 @@ def handle_join(data):
     if username:
         print(f"{username} has come online")
         online_users[username] = {'isTyping': False}
+
+        # Add the user to their own private room
+        join_room(username)
+        print(f"{username} has joined their private room.")
+
+        # Notify all clients about the updated online users
         emit('update_online_users', [{'username': user, 'isTyping': info['isTyping']} for user, info in online_users.items()], broadcast=True)
 
 @socketio.on('leave')
@@ -184,56 +189,46 @@ def handle_add_reaction(data):
 
     with sqlite3.connect(db_file) as conn:
         cursor = conn.cursor()
-        # Fetch existing reactions and reaction usernames
-        cursor.execute('SELECT reactions, reactions_usernames FROM messages WHERE id = ?', (message_id,))
+        cursor.execute('SELECT reactions FROM messages WHERE id = ?', (message_id,))
         row = cursor.fetchone()
         if row:
             reactions = row[0] or ''
-            reactions_usernames = row[1] or ''
-            
-            # Append the new reaction and username
             reactions += f' {reaction}'
-            reactions_usernames += f' {reaction}:{data.get("username")}'
-            
-            # Update the database with the new reactions and usernames
-            cursor.execute('UPDATE messages SET reactions = ?, reactions_usernames = ? WHERE id = ?', 
-                           (reactions.strip(), reactions_usernames.strip(), message_id))
+            cursor.execute('UPDATE messages SET reactions = ? WHERE id = ?', (reactions.strip(), message_id))
             conn.commit()
 
+    print(reactions)
+
     # Broadcast the updated reactions to all clients
-    emit('update_reactions', {'id': message_id, 'reactions': reactions.strip()}, broadcast=True)
+    socketio.emit('update_reactions', {
+    'id': message_id,
+    'reactions': reactions.strip()
+})
+    print(f"Reactions updated for message ID {message_id}: {reactions.strip()}")
 
-@socketio.on('get_reaction_users')
-def handle_get_reaction_users(data):
-    """
-    Handle fetching users who reacted with a specific emoji for a message.
-    """
-    message_id = data.get('id')
-    reaction = data.get('reaction')
+# In-memory database for private messages
+private_messages = {}
 
-    if message_id and reaction:
-        with sqlite3.connect(db_file) as conn:
-            cursor = conn.cursor()
-            # Fetch existing reactions and reaction usernames
-            cursor.execute('SELECT reactions_usernames FROM messages WHERE id = ?', (message_id,))
-            row = cursor.fetchone()
-            if row:
-                reactions_usernames = row[0] or ''
-                # Parse the reactions_usernames to extract all reactions and their associated users
-                reaction_details = {}
-                for entry in reactions_usernames.split():
-                    emoji, user = entry.split(':')
-                    if emoji not in reaction_details:
-                        reaction_details[emoji] = []
-                    reaction_details[emoji].append(user)
-                print(reaction_details)
-            else:
-                reaction_details = {}
+@socketio.on('private_message')
+def handle_private_message(data):
+    sender = data.get('username')  # Ensure the sender's username is included in the data
+    recipient = data.get('recipient')
+    message = data.get('message')
+    print(f"Private message from {sender} to {recipient}: {message}")
 
-        emit('reaction_users', {
-            'id': message_id,
-            'reaction_details': reaction_details
-        }, room=request.sid)
+    if sender and recipient and message:
+        # Save the message in memory
+        if recipient not in private_messages:
+            private_messages[recipient] = []
+        private_messages[recipient].append({'sender': sender, 'message': message})
+
+        # Emit the message to the recipient
+        emit('receive_private_message', {'sender': sender, 'message': message}, room=recipient)
+
+        # Ensure the sender is in the room for acknowledgment
+        join_room(sender)
+
+    
 
 @socketio.on('join_rps')
 def handle_join_rps(data):

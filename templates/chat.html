@@ -493,6 +493,39 @@
             <h3>Online Users</h3>
             <ul id="online-users-list"></ul>
         </div>
+        <!-- Private Message Box -->
+        <div id="private-message-box" style="position: fixed; bottom: 10px; right: 10px; width: 300px; background: var(--pm-box-bg, #f1f1f1); border: 1px solid var(--pm-box-border, #ccc); border-radius: 5px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); display: none; z-index: 1000;">
+            <div id="private-message-tabs" style="display: flex; border-bottom: 1px solid var(--pm-tabs-border, #ccc); overflow-x: auto;"></div>
+            <div id="private-message-content" style="padding: 10px; max-height: 200px; overflow-y: auto; color: var(--pm-content-color, #000);"></div>
+            <form id="private-message-form" style="display: flex; padding: 10px; border-top: 1px solid var(--pm-form-border, #ccc);">
+            <input type="text" id="private-message-input" placeholder="Type a message..." style="flex: 1; padding: 5px; border: 1px solid var(--pm-input-border, #ccc); border-radius: 5px; margin-right: 5px; background: var(--pm-input-bg, #fff); color: var(--pm-input-color, #000);">
+            <button type="submit" style="padding: 5px 10px; background-color: var(--pm-button-bg, #007BFF); color: var(--pm-button-color, white); border: none; border-radius: 5px; cursor: pointer;">Send</button>
+            </form>
+        </div>
+        <style>
+            body.dark-mode #private-message-box {
+            --pm-box-bg: #2a2a2a;
+            --pm-box-border: #444;
+            }
+            body.dark-mode #private-message-tabs {
+            --pm-tabs-border: #555;
+            }
+            body.dark-mode #private-message-content {
+            --pm-content-color: #e0e0e0;
+            }
+            body.dark-mode #private-message-form {
+            --pm-form-border: #555;
+            }
+            body.dark-mode #private-message-input {
+            --pm-input-bg: #1e1e1e;
+            --pm-input-border: #555;
+            --pm-input-color: #e0e0e0;
+            }
+            body.dark-mode #private-message-form button {
+            --pm-button-bg: #444;
+            --pm-button-color: #e0e0e0;
+            }
+        </style>
         <div id="messages"></div>
         <form id="message-form">
             <button id="gif-button" type="button" style="margin-right: 10px; padding: 10px; background-color: var(--gif-button-bg, #007BFF); color: white; border: none; border-radius: 5px; cursor: pointer; font-weight: bold;">GIF</button>
@@ -814,11 +847,13 @@
 
             // Close the modal if clicked outside
             const closeModal = (event) => {
-                if (!profileModal.contains(event.target) && event.target !== userProfilePic) {
-                document.body.removeChild(profileModal);
-                document.removeEventListener('click', closeModal);
-                }
-            };
+    if (profileModal && !profileModal.contains(event.target) && event.target !== userProfilePic) {
+        if (document.body.contains(profileModal)) {
+            document.body.removeChild(profileModal);
+        }
+        document.removeEventListener('click', closeModal);
+    }
+};
 
             setTimeout(() => {
                 document.addEventListener('click', closeModal);
@@ -1042,9 +1077,12 @@
                 });
 
                 profileModal.querySelector('#dm-button').addEventListener('click', () => {
-                    alert(`Direct messaging ${username}`);
-                    document.body.removeChild(profileModal);
-                });
+                // Open a private chat with the selected user
+                openPrivateChat(username);
+
+                // Remove the profile modal
+                document.body.removeChild(profileModal);
+            });
 
                 profileModal.querySelector('#tag-button').addEventListener('click', () => {
                     messageInput.value += `@${username} `;
@@ -1159,7 +1197,7 @@
                     <strong>${messageUsername}</strong>
                     <p>${message}</p>
                     ${imageTag}
-                    <div class="reactions">${reactions || ''}</div>
+                <div class="reactions">${Array.isArray(reactions) ? reactions.join(' ') : reactions || ''}</div>
                     <div class="message-actions">
                         <button class="react-button" data-message-id="${id}">React</button>
                         ${isOwnMessage ? `<button class="edit-button" data-message-id="${id}">Edit</button>` : ''}
@@ -1187,51 +1225,50 @@
             }
         }
 
-        // Handle reaction button click
+       // Handle reaction button click
         messagesDiv.addEventListener('click', (e) => {
-            if (e.target.classList.contains('react-button')) {
-                const messageId = e.target.dataset.messageId;
-                const emojiPicker = document.createElement('div');
-                emojiPicker.style.position = 'absolute';
-                emojiPicker.style.background = '#fff';
-                emojiPicker.style.border = '1px solid #ccc';
-                emojiPicker.style.padding = '10px';
-                emojiPicker.style.borderRadius = '5px';
-                emojiPicker.style.boxShadow = '0 4px 6px rgba(0, 0, 0, 0.1)';
-                emojiPicker.style.zIndex = '1000';
+        if (e.target.classList.contains('react-button')) {
+        const messageId = e.target.dataset.messageId;
+        const emojiPicker = document.createElement('div');
+        emojiPicker.style.position = 'absolute';
+        emojiPicker.style.background = '#fff';
+        emojiPicker.style.border = '1px solid #ccc';
+        emojiPicker.style.padding = '10px';
+        emojiPicker.style.borderRadius = '5px';
+        emojiPicker.style.boxShadow = '0 4px 6px rgba(0, 0, 0, 0.1)';
+        emojiPicker.style.zIndex = '1000';
 
-                const emojis = ['😀', '😂', '😍', '👍', '🎉', '❤️', '😢', '😡'];
-                emojis.forEach((emoji) => {
-                    const emojiButton = document.createElement('button');
-                    emojiButton.textContent = emoji;
-                    emojiButton.style.border = 'none';
-                    emojiButton.style.background = 'transparent';
-                    emojiButton.style.fontSize = '20px';
-                    emojiButton.style.cursor = 'pointer';
-                    emojiButton.style.margin = '5px';
-                    emojiButton.addEventListener('click', () => {
-                        socket.emit('add_reaction', { id: messageId, reaction: emoji, username });
-                        document.body.removeChild(emojiPicker);
-                    });
-                    emojiPicker.appendChild(emojiButton);
-                });
-
-                document.body.appendChild(emojiPicker);
-
-                // Position the emoji picker near the clicked button
-                const rect = e.target.getBoundingClientRect();
-                emojiPicker.style.top = `${rect.bottom + window.scrollY}px`;
-                emojiPicker.style.left = `${rect.left + window.scrollX}px`;
-
-                // Close the emoji picker if clicked outside
-                document.addEventListener('click', (event) => {
-                    if (!emojiPicker.contains(event.target) && event.target !== e.target) {
-                        document.body.removeChild(emojiPicker);
-                    }
-                }, { once: true });
-
-            }
+        const emojis = ['😀', '😂', '😍', '👍', '🎉', '❤️', '😢', '😡'];
+        emojis.forEach((emoji) => {
+            const emojiButton = document.createElement('button');
+            emojiButton.textContent = emoji;
+            emojiButton.style.border = 'none';
+            emojiButton.style.background = 'transparent';
+            emojiButton.style.fontSize = '20px';
+            emojiButton.style.cursor = 'pointer';
+            emojiButton.style.margin = '5px';
+            emojiButton.addEventListener('click', () => {
+                socket.emit('add_reaction', { id: messageId, reaction: emoji });
+                document.body.removeChild(emojiPicker);
+            });
+            emojiPicker.appendChild(emojiButton);
         });
+
+        document.body.appendChild(emojiPicker);
+
+        // Position the emoji picker near the clicked button
+        const rect = e.target.getBoundingClientRect();
+        emojiPicker.style.top = `${rect.bottom + window.scrollY}px`;
+        emojiPicker.style.left = `${rect.left + window.scrollX}px`;
+
+        // Close the emoji picker if clicked outside
+        document.addEventListener('click', (event) => {
+            if (!emojiPicker.contains(event.target) && event.target !== e.target) {
+                document.body.removeChild(emojiPicker);
+            }
+        }, { once: true });
+    }
+});
 
         // Handle edit button click
         messagesDiv.addEventListener('click', (e) => {
@@ -1255,36 +1292,32 @@
             }
         });
 
-        // Update reactions for a message
-        socket.on('update_reactions', (data) => {
-            const messageElement = document.querySelector(`.message[data-id="${data.id}"]`);
-            if (messageElement) {
-            const reactionsDiv = messageElement.querySelector('.reactions');
-            reactionsDiv.innerHTML = ''; // Clear existing reactions
-            Object.entries(data.reactions).forEach(([emoji, count]) => {
-                const reactionDiv = document.createElement('div');
-                reactionDiv.style.display = 'inline-block';
-                reactionDiv.style.marginRight = '10px';
-                reactionDiv.style.cursor = 'pointer';
-                reactionDiv.textContent = `${emoji} ${count}`;
-                reactionsDiv.appendChild(reactionDiv);
-            });
-            }
-        });
-
-        // Handle reaction click to show who reacted
-    messagesDiv.addEventListener('click', (e) => {
-        if (e.target.classList.contains('reactions')) {
-        console.log("Clicked on reactions div");
-        const messageId = e.target.closest('.message').dataset.id;
-        const clickedEmoji = e.target.textContent.trim(); // Get the clicked emoji
-
-        console.log(`Fetching users who reacted with "${clickedEmoji}" for message ID: ${messageId}`);
-
-        // Request the list of users who reacted with the specific emoji
-        socket.emit('get_reaction_users', { id: messageId, reaction: clickedEmoji });
+        // Update reactions for a message in real-time
+    socket.on('update_reactions', (data) => {
+    console.log(`Received update_reactions event for message ID: ${data.id}, reactions: ${data.reactions}`);
+    
+    // Find the message element by its data-id
+    const messageElement = document.querySelector(`.message[data-id="${data.id}"]`);
+    if (messageElement) {
+        console.log(`Message element found for ID: ${data.id}`);
+        
+        // Find the reactions div inside the message element
+        const reactionsDiv = messageElement.querySelector('.reactions');
+        if (reactionsDiv) {
+            console.log(`Reactions div found for message ID: ${data.id}`);
+            
+            // Update the reactions div with the new reactions
+            reactionsDiv.innerHTML = data.reactions || ''; // Use innerHTML to handle emojis properly
+            console.log(`Reactions updated for message ID: ${data.id}, reactions: ${data.reactions}`);
+        } else {
+            console.error(`Reactions div not found for message ID: ${data.id}`);
         }
-    });
+    } else {
+        console.error(`Message element not found for message ID: ${data.id}`);
+    }
+});
+
+        
 
 // Listen for the server response with the list of users (register only once)
 socket.on('reaction_users', (data) => {
@@ -1593,8 +1626,135 @@ socket.on('reaction_users', (data) => {
         });
 
         
+// Private Messaging Variables
+const privateMessageBox = document.getElementById('private-message-box');
+const privateMessageTabs = document.getElementById('private-message-tabs');
+const privateMessageContent = document.getElementById('private-message-content');
+const privateMessageForm = document.getElementById('private-message-form');
+const privateMessageInput = document.getElementById('private-message-input');
 
+let privateChats = {}; // Store private chats in memory
 
+// Handle Private Message Button Click
+document.body.addEventListener('click', (e) => {
+    if (e.target.id === 'dm-button') {
+        const messageElement = e.target.closest('.message');
+        if (messageElement) {
+            const recipient = messageElement.querySelector('strong').textContent;
+            openPrivateChat(recipient);
+        } else {
+            console.error('Could not find the parent .message element for the DM button.');
+        }
+    }
+});
+
+// Open a Private Chat Tab
+function openPrivateChat(username) {
+    if (!privateChats[username]) {
+        privateChats[username] = []; // Initialize chat history
+
+        // Create a new tab for the user
+        const tab = document.createElement('div');
+        tab.textContent = username;
+        tab.style.padding = '5px 10px';
+        tab.style.cursor = 'pointer';
+        tab.style.borderBottom = '2px solid transparent';
+        tab.style.marginRight = '5px';
+        tab.addEventListener('click', () => switchPrivateChat(username));
+        privateMessageTabs.appendChild(tab);
+
+        // Automatically switch to the new tab
+        switchPrivateChat(username);
+    }
+
+    // Show the private message box
+    privateMessageBox.style.display = 'block';
+}
+
+// Switch to a Private Chat Tab
+function switchPrivateChat(username) {
+    // Highlight the active tab
+    Array.from(privateMessageTabs.children).forEach((tab) => {
+        tab.style.borderBottom = tab.textContent === username ? '2px solid #007BFF' : '2px solid transparent';
+    });
+
+    // Display the chat history
+    privateMessageContent.innerHTML = '';
+    privateChats[username].forEach((message) => {
+        const messageElement = document.createElement('div');
+        messageElement.textContent = message;
+        privateMessageContent.appendChild(messageElement);
+    });
+
+    // Save the current chat recipient
+    privateMessageBox.dataset.activeChat = username;
+}
+
+// Handle Sending a Private Message
+privateMessageForm.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const message = privateMessageInput.value.trim();
+    const recipient = privateMessageBox.dataset.activeChat;
+
+    if (message && recipient) {
+        // Append the message to the chat history
+        privateChats[recipient].push(`You: ${message}`);
+        switchPrivateChat(recipient);
+
+        // Emit the private message to the server
+        socket.emit('private_message', { username, recipient, message });
+
+        // Clear the input field
+        privateMessageInput.value = '';
+    }
+});
+
+/// Handle Receiving a Private Message
+socket.on('receive_private_message', (data) => {
+    const { sender, message } = data;
+    console.log(`Private message received from ${sender}: ${message}`);
+
+    // Open a private chat tab if it doesn't exist
+    if (!privateChats[sender]) {
+        openPrivateChat(sender); // Create the tab and initialize the chat
+    }
+
+    // Append the message to the chat history
+    privateChats[sender].push(`${sender}: ${message}`);
+
+    // If the chat is active, display the new message
+    if (privateMessageBox.dataset.activeChat === sender) {
+        switchPrivateChat(sender);
+    } else {
+        // Highlight the tab if the chat is not active
+        const tab = Array.from(privateMessageTabs.children).find(tab => tab.textContent === sender);
+        if (tab) {
+            tab.style.backgroundColor = '#f0f0f0'; // Highlight the tab
+        }
+    }
+
+    // Ensure the private message box is visible
+    privateMessageBox.style.display = 'block';
+});
+// Highlight the tab if the chat is not active
+const tab = Array.from(privateMessageTabs.children).find(tab => tab.textContent === sender);
+if (tab) {
+    tab.style.backgroundColor = '#f0f0f0'; // Highlight the tab
+    if (!tab.querySelector('.unread-badge')) {
+        const badge = document.createElement('span');
+        badge.classList.add('unread-badge');
+        badge.textContent = '1'; // Start with 1 unread message
+        badge.style.backgroundColor = 'red';
+        badge.style.color = 'white';
+        badge.style.borderRadius = '50%';
+        badge.style.padding = '2px 5px';
+        badge.style.marginLeft = '5px';
+        tab.appendChild(badge);
+    } else {
+        const badge = tab.querySelector('.unread-badge');
+        badge.textContent = parseInt(badge.textContent) + 1; // Increment unread count
+    }
+}
 
         
         
