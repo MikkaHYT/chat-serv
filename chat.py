@@ -28,6 +28,15 @@ def init_db():
                 reactions TEXT
             )
         ''')
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS users (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                username TEXT NOT NULL UNIQUE,
+                password TEXT NOT NULL,
+                bio TEXT DEFAULT '', -- Add bio column
+                profilePic TEXT DEFAULT '' -- Add profilePic column
+            )
+        ''')
         conn.commit()
 
 init_db()
@@ -92,6 +101,8 @@ def handle_edit_message(data):
 
         # Broadcast the updated message to all clients
         emit('update_message', {'id': message_id, 'message': f"{new_message} (edited)"}, broadcast=True)
+
+
 
 @socketio.on('delete_message')
 def handle_delete_message(data):
@@ -161,23 +172,57 @@ def handle_connect():
     # Emit all messages to the newly connected client
     emit('load_messages', load_messages_from_db(), broadcast=False)
 
+@socketio.on('login')
+def handle_login(data):
+    username = data.get('username')
+    print(f"Login attempt: {username}")
+    password = data.get('password')
+
+    with sqlite3.connect(db_file) as conn:
+        cursor = conn.cursor()
+        cursor.execute('SELECT * FROM users WHERE username = ? AND password = ?', (username, password))
+        user = cursor.fetchone()
+
+    if user:
+        emit('login_success', username)  # Emit the username
+    else:
+        emit('login_failure', {'message': 'Invalid username or password'})
+
+@socketio.on('register')
+def handle_register(data):
+    username = data.get('username')
+    password = data.get('password')
+
+    with sqlite3.connect(db_file) as conn:
+        cursor = conn.cursor()
+        cursor.execute('SELECT * FROM users WHERE username = ?', (username,))
+        user = cursor.fetchone()
+
+        if user:
+            emit('register_failure', {'message': 'Username already exists'})
+        else:
+            cursor.execute('INSERT INTO users (username, password) VALUES (?, ?)', (username, password))
+            conn.commit()
+            emit('register_success', {'message': 'Registration successful', 'username': username})
 # Track online users
 online_users = {}
 
 @socketio.on('join')
 def handle_join(data):
-    username = data.get('username')
+    
+    username = data.get('username')  # Get the username from the client
+    print(f"Join event received for: {username}")
     if username:
-        print(f"{username} has come online")
+        print(f"{username} has come online")  # Debugging: Print the username
         online_users[username] = {'isTyping': False}
 
         # Add the user to their own private room
         join_room(username)
-        print(f"{username} has joined their private room.")
+        print(f"{username} has joined their private room.")  # Debugging: Confirm room join
 
         # Notify all clients about the updated online users
         emit('update_online_users', [{'username': user, 'isTyping': info['isTyping']} for user, info in online_users.items()], broadcast=True)
-
+        
 @socketio.on('leave')
 def handle_leave(data):
     username = data.get('username')
@@ -185,6 +230,27 @@ def handle_leave(data):
         print(f"{username} has went offline")
         del online_users[username]
         emit('update_online_users', [{'username': user, 'isTyping': info['isTyping']} for user, info in online_users.items()], broadcast=True)
+
+@socketio.on('get_user_data')
+def handle_get_user_data(data):
+    username = data.get('username')
+    with sqlite3.connect(db_file) as conn:
+        cursor = conn.cursor()
+        cursor.execute('SELECT bio, profilePic FROM users WHERE username = ?', (username,))
+        user = cursor.fetchone()
+        if user:
+            emit('user_data', {'bio': user[0], 'profilePic': user[1]})
+
+@socketio.on('update_user_data')
+def handle_update_user_data(data):
+    username = data.get('username')
+    bio = data.get('bio', '')
+    profilePic = data.get('profilePic', '')
+
+    with sqlite3.connect(db_file) as conn:
+        cursor = conn.cursor()
+        cursor.execute('UPDATE users SET bio = ?, profilePic = ? WHERE username = ?', (bio, profilePic, username))
+        conn.commit()
 
 @socketio.on('add_reaction')
 def handle_add_reaction(data):
@@ -370,6 +436,74 @@ def handle_admin_erase_chat():
         conn.commit()
     # Notify all clients that the chat has been erased
     emit('admin_chat_erased', broadcast=True)
+
+@socketio.on('join_tictactoe')
+def handle_join_tictactoe(data):
+        username = data.get('username')
+        print(f"{username} has joined the Tic-Tac-Toe game")
+        if username:
+            if 'tictactoe_game' not in globals():
+                global tictactoe_game
+                tictactoe_game = {
+                    'board': [''] * 9,
+                    'players': [],
+                    'currentPlayer': 'X',
+                    'isGameOver': False
+                }
+
+            if len(tictactoe_game['players']) < 2:
+                tictactoe_game['players'].append(username)
+                join_room(username)
+                if len(tictactoe_game['players']) == 2:
+                    player1, player2 = tictactoe_game['players']
+                    socketio.emit('tictactoe_start', {'opponent': player2}, room=player1)
+                    socketio.emit('tictactoe_start', {'opponent': player1}, room=player2)
+                else:
+                    emit('tictactoe_waiting', {'message': 'Waiting for another player to join...'})
+            else:
+                emit('tictactoe_full', {'message': 'Game is full. Please wait for the next round.'})
+
+@socketio.on('tictactoe_move')
+def handle_tictactoe_move(data):
+        username = data.get('username')
+        index = data.get('index')
+        player = data.get('player')
+
+        if tictactoe_game['isGameOver'] or tictactoe_game['board'][index] != '' or tictactoe_game['currentPlayer'] != player:
+            return
+
+        tictactoe_game['board'][index] = player
+        tictactoe_game['currentPlayer'] = 'O' if player == 'X' else 'X'
+
+        socketio.emit('tictactoe_update', {'board': tictactoe_game['board'], 'currentPlayer': tictactoe_game['currentPlayer']}, broadcast=True)
+
+        winner = check_tictactoe_winner()
+        if winner:
+            tictactoe_game['isGameOver'] = True
+            socketio.emit('tictactoe_game_over', {'winner': winner}, broadcast=True)
+        elif all(cell != '' for cell in tictactoe_game['board']):
+            tictactoe_game['isGameOver'] = True
+            socketio.emit('tictactoe_game_over', {'winner': None}, broadcast=True)
+
+@socketio.on('leave_tictactoe')
+def handle_leave_tictactoe(data):
+        username = data.get('username')
+        if username in tictactoe_game['players']:
+            tictactoe_game['players'].remove(username)
+            tictactoe_game['isGameOver'] = True
+            socketio.emit('tictactoe_game_over', {'winner': None}, broadcast=True)
+
+def check_tictactoe_winner():
+        winning_combinations = [
+            [0, 1, 2], [3, 4, 5], [6, 7, 8],  # Rows
+            [0, 3, 6], [1, 4, 7], [2, 5, 8],  # Columns
+            [0, 4, 8], [2, 4, 6]              # Diagonals
+        ]
+        for combo in winning_combinations:
+            a, b, c = combo
+            if tictactoe_game['board'][a] == tictactoe_game['board'][b] == tictactoe_game['board'][c] and tictactoe_game['board'][a] != '':
+                return tictactoe_game['board'][a]
+        return None
 
 if __name__ == '__main__':
     socketio.run(app, debug=True)

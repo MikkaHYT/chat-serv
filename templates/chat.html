@@ -334,12 +334,153 @@
 <body>
     <div id="username-modal">
         <form id="username-form">
-            <h2>Enter a Username</h2>
-            <input type="text" id="username" placeholder="Username" required>
-            <input type="file" id="profile-pic" accept="image/*">
-            <button type="submit">Join Chat</button>
+            <h2>Login or Register</h2>
+            <div id="form-tabs" style="display: flex; justify-content: center; margin-bottom: 20px;">
+                <button type="button" id="login-tab" style="padding: 10px 20px; border: none; cursor: pointer; background-color: #007BFF; color: white; border-radius: 5px; margin-right: 10px;">Login</button>
+                <button type="button" id="register-tab" style="padding: 10px 20px; border: none; cursor: pointer; background-color: #f1f1f1; color: #333; border-radius: 5px;">Register</button>
+            </div>
+            <div id="login-form" style="display: block;">
+                <input type="text" id="login-username" placeholder="Username" required>
+                <input type="password" id="login-password" placeholder="Password" required>
+                <button type="submit">Login</button>
+            </div>
+            <div id="register-form" style="display: none;">
+                <input type="text" id="register-username" placeholder="Username" required>
+                <input type="password" id="register-password" placeholder="Password" required>
+                <button type="submit">Register</button>
+            </div>
         </form>
     </div>
+    <script>
+        const loginTab = document.getElementById('login-tab');
+const registerTab = document.getElementById('register-tab');
+const loginForm = document.getElementById('login-form');
+const registerForm = document.getElementById('register-form');
+
+// Switch between login and register forms
+loginTab.addEventListener('click', () => {
+    loginForm.style.display = 'block';
+    registerForm.style.display = 'none';
+    loginTab.style.backgroundColor = '#007BFF';
+    loginTab.style.color = 'white';
+    registerTab.style.backgroundColor = '#f1f1f1';
+    registerTab.style.color = '#333';
+});
+
+registerTab.addEventListener('click', () => {
+    loginForm.style.display = 'none';
+    registerForm.style.display = 'block';
+    registerTab.style.backgroundColor = '#007BFF';
+    registerTab.style.color = 'white';
+    loginTab.style.backgroundColor = '#f1f1f1';
+    loginTab.style.color = '#333';
+});
+
+// Handle login form submission
+document.querySelector('#login-form button[type="submit"]').addEventListener('click', (e) => {
+    e.preventDefault();
+    const username = document.getElementById('login-username').value.trim();
+    const password = document.getElementById('login-password').value.trim();
+
+    if (!username) {
+        alert('Username cannot be empty.');
+        return;
+    }
+
+    if (username && password) {
+        // Emit login event to the server
+        socket.emit('login', { username, password });
+
+        // Store the username in localStorage
+        localStorage.setItem('username', username);
+    } else {
+        alert('Please fill in both fields.');
+    }
+});
+
+// Handle register form submission
+document.querySelector('#register-form button[type="submit"]').addEventListener('click', (e) => {
+    e.preventDefault();
+    const username = document.getElementById('register-username').value.trim();
+    const password = document.getElementById('register-password').value.trim();
+
+    if (!username || !password) {
+        alert('Please fill in all fields.');
+        return;
+    }
+
+    // Emit register event to the server
+    socket.emit('register', { username, password });
+
+    // Optionally store the username in localStorage
+    localStorage.setItem('username', username);
+    alert('Registration successful! Please log in.');
+});
+
+// Listen for login success from the server
+socket.on('login_success', (data) => {
+    alert(data.message);
+    const username = data.username; // Get the username from the server response
+    localStorage.setItem('username', username); // Store it in localStorage
+    joinChat(username); // Call the function to join the chat
+});
+
+// Listen for login failure
+socket.on('login_failure', (data) => {
+    alert(data.message);
+});
+// Handle register form submission
+document.querySelector('#register-form button[type="submit"]').addEventListener('click', (e) => {
+    e.preventDefault();
+    const username = document.getElementById('register-username').value.trim();
+    const password = document.getElementById('register-password').value.trim();
+
+    if (username && password) {
+        socket.emit('register', { username, password });
+        console.log(username); // Check if this logs the expected value
+        localStorage.setItem('username', username); // Optionally store it in localStorage
+        location.reload(); // Refresh the website
+        alert("Registered, login.")
+    } else {
+        alert('Please fill in all fields.');
+    }
+});
+
+
+socket.on('login_success', (data) => {
+    alert(data.message);
+    username = data.username; // Store the username from the server response
+    console.log(username); // Check if this logs the expected value
+    localStorage.setItem('username', username); // Optionally store it in localStorage
+    joinChat(username); // Call the function to join the chat
+});
+
+function joinChat(username) {
+    document.getElementById('username-modal').style.display = 'none'; // Hide the login modal
+    document.getElementById('chat-container').style.display = 'flex'; // Show the chat container
+    console.log(username); // Check if this logs the expected value
+    localStorage.setItem('username', username); // Optionally store it in localStorage
+    socket.emit('join', { username }); // Notify the server that the user has joined
+}
+
+
+socket.on('login_failure', (data) => {
+    alert(data.message);
+});
+
+// Listen for register success or failure
+socket.on('register_success', (data) => {
+    alert(data.message);
+    username = data.username;
+    console.log(username); // Check if this logs the expected value
+    localStorage.setItem('username', username); // Optionally store it in localStorage
+    joinChat(username);
+});
+
+socket.on('register_failure', (data) => {
+    alert(data.message);
+});
+    </script>
     <style>
         #username-modal {
             position: fixed;
@@ -434,6 +575,7 @@
                 <button class="dropdown-button">Extras</button>
                 <div class="dropdown-content">
                     <button id="game-button">Rock-Paper-Scissors</button>
+                    <button id="tictactoe-button">Tic-Tac-Toe</button> <!-- New button -->
                     <button id="superhot-button" onclick="window.location.href='/sh'">SUPERHOT</button>
             <!--    <button id="placeholder-option-2">Placeholder Option 2</button>
                     <button id="placeholder-option-3">Placeholder Option 3</button> -->
@@ -503,6 +645,13 @@
             </form>
         </div>
         <style>
+            /* Ensure the private message box height adjusts dynamically */
+            #private-message-box {
+                max-height: 300px; /* Set a maximum height to prevent it from growing indefinitely */
+                overflow-y: auto; /* Add a scrollbar if the content exceeds the max height */
+                resize: none; /* Prevent resizing by dragging */
+            }
+
             body.dark-mode #private-message-box {
             --pm-box-bg: #2a2a2a;
             --pm-box-border: #444;
@@ -553,7 +702,27 @@
     </div>
     <div id="gif-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.5); z-index: 1000; justify-content: center; align-items: center;">
         <div style="background: white; padding: 20px; border-radius: 10px; width: 80%; max-width: 600px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
-
+        </div>
+        </div>
+    <div id="tictactoe-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.5); z-index: 1000; justify-content: center; align-items: center;">
+                <div style="background: white; padding: 20px; border-radius: 10px; width: 300px; text-align: center; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+                    <h2>Tic-Tac-Toe</h2>
+                    <div id="tictactoe-board" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; margin: 20px auto; width: 150px;">
+                        <!-- 3x3 grid for the game -->
+                        <button class="tictactoe-cell" style="width: 50px; height: 50px; font-size: 24px;"></button>
+                        <button class="tictactoe-cell" style="width: 50px; height: 50px; font-size: 24px;"></button>
+                        <button class="tictactoe-cell" style="width: 50px; height: 50px; font-size: 24px;"></button>
+                        <button class="tictactoe-cell" style="width: 50px; height: 50px; font-size: 24px;"></button>
+                        <button class="tictactoe-cell" style="width: 50px; height: 50px; font-size: 24px;"></button>
+                        <button class="tictactoe-cell" style="width: 50px; height: 50px; font-size: 24px;"></button>
+                        <button class="tictactoe-cell" style="width: 50px; height: 50px; font-size: 24px;"></button>
+                        <button class="tictactoe-cell" style="width: 50px; height: 50px; font-size: 24px;"></button>
+                        <button class="tictactoe-cell" style="width: 50px; height: 50px; font-size: 24px;"></button>
+                    </div>
+                    <p id="tictactoe-status"></p>
+                    <button id="close-tictactoe" style="margin-top: 10px; padding: 10px 20px; background-color: #444; color: white; border: none; border-radius: 5px; cursor: pointer;">Close</button>
+                </div>
+            </div>
     <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
     <script>
         const socket = io();
@@ -639,15 +808,16 @@
                 console.log('Dark mode enabled from localStorage');
             }
             const savedUsername = localStorage.getItem('username');
-            const savedProfilePic = localStorage.getItem('profilePic');
             if (savedUsername) {
                 username = savedUsername;
-                profilePic = savedProfilePic || '';
-                joinChat();
-
+                socket.emit('join', { username }); // Notify the server that the user has joined
+                joinChat(username); // Automatically rejoin the chat
+                
             } else {
-                usernameModal.style.display = 'flex';
+                document.getElementById('username-modal').style.display = 'flex'; // Show the login modal
             }
+            const savedProfilePic = localStorage.getItem('profilePic');
+
         });
 
         // Save user details to localStorage on form submission
@@ -674,7 +844,7 @@
             }
         });
 
-        // Handle username form submission
+        /* Handle username form submission
         usernameForm.addEventListener('submit', (e) => {
             e.preventDefault();
             username = document.getElementById('username').value;
@@ -691,7 +861,7 @@
                 //joinChat();
             }
         });
-
+*/
         // Handle page unload or logout
         window.addEventListener('beforeunload', () => {
             socket.emit('leave', { username });
@@ -721,44 +891,86 @@
             `;
         document.body.appendChild(mutedUsersModal);
 
-        
-
         // Handle profile picture click
-        messagesDiv.addEventListener('click', (e) => {
-            if (e.target.tagName === 'IMG' && e.target.parentElement.classList.contains('message')) {
-            const userProfilePic = e.target;
-            const username = userProfilePic.nextElementSibling.querySelector('strong').textContent;
+    messagesDiv.addEventListener('click', (e) => {
+        if (e.target.tagName === 'IMG' && e.target.parentElement.classList.contains('message')) {
+        e.stopPropagation(); // Prevent other click events from triggering
+        return;
 
-            // Create the modal
-            const profileModal = document.createElement('div');
-            profileModal.style.position = 'absolute';
-            profileModal.style.background = '#fff';
-            profileModal.style.border = '1px solid #ccc';
-            profileModal.style.padding = '10px';
-            profileModal.style.borderRadius = '5px';
-            profileModal.style.boxShadow = '0 4px 6px rgba(0, 0, 0, 0.1)';
-            profileModal.style.zIndex = '1000';
+        // Check if a modal is already open
+        if (document.getElementById('profile-modal')) {
+            return; // Prevent opening multiple modals
+        }
 
-            // Add buttons to the modal
-            profileModal.innerHTML = `
-                <button id="mute-button">Mute</button>
-                <button id="dm-button">Direct Message</button>
-                <button id="tag-button">Tag</button>
-            `;
+        const userProfilePic = e.target;
+        const username = userProfilePic.nextElementSibling.querySelector('strong').textContent;
 
-            document.body.appendChild(profileModal);
+        // Fetch user data
+        socket.emit('get_user_data', { username });
 
-            // Position the modal next to the profile picture
-            const rect = userProfilePic.getBoundingClientRect();
-            profileModal.style.top = `${rect.bottom + window.scrollY}px`;
-            profileModal.style.left = `${rect.left + window.scrollX}px`;
+        // Create the modal
+        const profileModal = document.createElement('div');
+        profileModal.id = 'profile-modal'; // Add an ID to prevent duplicates
+        profileModal.style.position = 'absolute';
+        profileModal.style.border = '1px solid #ccc';
+        profileModal.style.padding = '10px';
+        profileModal.style.borderRadius = '5px';
+        profileModal.style.boxShadow = '0 4px 6px rgba(0, 0, 0, 0.1)';
+        profileModal.style.zIndex = '1000';
+        profileModal.style.background = document.body.classList.contains('dark-mode') ? '#5a5a5a' : '#fff';
+        profileModal.style.color = document.body.classList.contains('dark-mode') ? '#e0e0e0' : '#000';
 
-            // Add event listeners for the buttons
-            document.getElementById('mute-button').addEventListener('click', () => {
-                alert(`Muted ${username}`);
-                document.body.removeChild(profileModal);
-                // Mute the user
-                socket.emit('mute_user', { username });
+        // Add content to the modal
+        profileModal.innerHTML = `
+            <div>
+            <img src="${userProfilePic.src}" alt="Profile Picture" style="width: 100px; height: 100px; border-radius: 50%; margin-bottom: 10px;">
+            <h3>${username}</h3>
+            <p id="user-bio" style="margin-bottom: 10px;">Loading bio...</p>
+            <button id="mute-button" style="margin-top: 10px; padding: 5px 10px; background-color: #444; color: white; border: none; border-radius: 5px; cursor: pointer;">Mute</button>
+            <button id="dm-button" style="margin-top: 10px; padding: 5px 10px; background-color: #444; color: white; border: none; border-radius: 5px; cursor: pointer;">Direct Message</button>
+            <button id="tag-button" style="margin-top: 10px; padding: 5px 10px; background-color: #444; color: white; border: none; border-radius: 5px; cursor: pointer;">Tag</button>
+            <button id="close-profile-modal" style="margin-top: 10px; padding: 5px 10px; background-color: #444; color: white; border: none; border-radius: 5px; cursor: pointer;">Close</button>
+        `;
+
+
+
+        // Position the modal next to the profile picture
+        const rect = userProfilePic.getBoundingClientRect();
+        profileModal.style.top = `${rect.bottom + window.scrollY}px`;
+        profileModal.style.left = `${rect.left + window.scrollX}px`;
+
+        // Close the modal
+        document.getElementById('close-profile-modal').addEventListener('click', () => {
+            document.body.removeChild(profileModal);
+        });
+
+        // Update bio when data is received
+        socket.on('user_data', (data) => {
+            if (data.bio) {
+            document.getElementById('user-bio').textContent = data.bio;
+            }
+        });
+
+        // Add mute functionality
+        document.getElementById('mute-button').addEventListener('click', () => {
+            muteUser(username);
+            alert(`${username} has been muted.`);
+            document.body.removeChild(profileModal);
+        });
+
+        // Add direct message functionality
+        document.getElementById('dm-button').addEventListener('click', () => {
+            openPrivateChat(username);
+            document.body.removeChild(profileModal);
+        });
+
+        // Add tag functionality
+        document.getElementById('tag-button').addEventListener('click', () => {
+            messageInput.value += `@${username} `;
+            messageInput.focus();
+            document.body.removeChild(profileModal);
+        });
+    
 
                 // Remove their previous messages from the chat
                 const userMessages = document.querySelectorAll(`.message strong`);
@@ -781,7 +993,7 @@
                         appendMessage(data);
                     }
                 });
-            });
+            
 
             
 
@@ -888,7 +1100,12 @@
             mutedUsersList.innerHTML = '';
             mutedUsers.forEach((mutedUser) => {
                 try {
-                mutedUsersModal.style.display = 'block';
+                    console.log(mutedUsers)
+                if (mutedUsers == `['']`) {
+                    mutedUsersModal.style.display = 'none';
+                    return;
+                }
+                mutedUsersModal.style.display = 'none';
                 const userItem = document.createElement('li');
                 userItem.textContent = mutedUser;
                 userItem.style.cursor = 'pointer';
@@ -933,7 +1150,7 @@
             }
         }
 
-        function joinChat() {
+        function joinChat(username) {
             usernameModal.style.display = 'none';
             chatContainer.style.display = 'flex';
             socket.emit('join', { username, profilePic });
@@ -973,11 +1190,13 @@
 
         // Function to mute a user
         function muteUser(username) {
-            let mutedUsers = JSON.parse(localStorage.getItem('mutedUsers')) || [];
+            /*let mutedUsers = JSON.parse(localStorage.getItem('mutedUsers')) || [];
             if (!mutedUsers.includes(username)) {
                 mutedUsers.push(username);
                 localStorage.setItem('mutedUsers', JSON.stringify(mutedUsers));
                 updateMutedUsersList();
+                */
+            alert("Mute functionality has been disabled.");
             }
 
             // Remove their messages from the chat
@@ -1000,7 +1219,7 @@
                 }
             });
             localStorage.setItem('mutedMessages', JSON.stringify(mutedMessages)); // Save muted messages
-        }
+        
 
         // Function to unmute a user
         function unmuteUser(username) {
@@ -1030,81 +1249,95 @@
                 userItem.style.marginBottom = '5px';
                 userItem.addEventListener('click', () => {
                     unmuteUser(mutedUser);
-                    alert(`${mutedUser} has been unmuted.`);
+                    //alert(`${mutedUser} has been unmuted.`);
                 });
                 mutedUsersList.appendChild(userItem);
             });
         }
 
-        // Handle profile picture click for muting
-        messagesDiv.addEventListener('click', (e) => {
-            if (e.target.tagName === 'IMG' && e.target.parentElement.classList.contains('message')) {
-                const userProfilePic = e.target;
-                const username = userProfilePic.nextElementSibling.querySelector('strong').textContent;
+        // Handle profile picture click
+messagesDiv.addEventListener('click', (e) => {
+    if (e.target.tagName === 'IMG' && e.target.parentElement.classList.contains('message')) {
+        e.stopPropagation(); // Prevent other click events from triggering
+        const userProfilePic = e.target;
+        const username = userProfilePic.nextElementSibling.querySelector('strong').textContent;
 
-                // Create the modal
-                const profileModal = document.createElement('div');
-                profileModal.style.position = 'absolute';
-                profileModal.style.background = '#fff';
-                profileModal.style.border = '1px solid #ccc';
-                profileModal.style.padding = '10px';
-                profileModal.style.borderRadius = '5px';
-                profileModal.style.boxShadow = '0 4px 6px rgba(0, 0, 0, 0.1)';
-                profileModal.style.zIndex = '1000';
+        // Fetch user data
+        socket.emit('get_user_data', { username });
 
-                // Add buttons to the modal
-                profileModal.innerHTML = `
-                    <button id="mute-button">Mute</button>
-                    <button id="dm-button">Direct Message</button>
-                    <button id="tag-button">Tag</button>
-                `;
+        // Create the modal
+        const profileModal = document.createElement('div');
+        profileModal.style.position = 'absolute';
+        profileModal.style.background = '#fff';
+        profileModal.style.border = '1px solid #ccc';
+        profileModal.style.padding = '10px';
+        profileModal.style.borderRadius = '5px';
+        profileModal.style.boxShadow = '0 4px 6px rgba(0, 0, 0, 0.1)';
+        profileModal.style.zIndex = '1000';
 
-                document.body.appendChild(profileModal);
+        // Add content to the modal
+        profileModal.innerHTML = `
+            <img src="${userProfilePic.src}" alt="Profile Picture" style="width: 100px; height: 100px; border-radius: 50%; margin-bottom: 10px;">
+            <h3>${username}</h3>
+            <p id="user-bio" style="margin-bottom: 10px;">Loading bio...</p>
+            <button id="mute-button" style="margin-top: 10px; padding: 5px 10px; background-color: #444; color: white; border: none; border-radius: 5px; cursor: pointer;">Mute</button>
+            <button id="dm-button" style="margin-top: 10px; padding: 5px 10px; background-color: #444; color: white; border: none; border-radius: 5px; cursor: pointer;">Direct Message</button>
+            <button id="tag-button" style="margin-top: 10px; padding: 5px 10px; background-color: #444; color: white; border: none; border-radius: 5px; cursor: pointer;">Tag</button>
+            <button id="close-profile-modal" style="margin-top: 10px; padding: 5px 10px; background-color: #444; color: white; border: none; border-radius: 5px; cursor: pointer;">Close</button>
+        `;
 
-                // Position the modal next to the profile picture
-                const rect = userProfilePic.getBoundingClientRect();
-                profileModal.style.top = `${rect.bottom + window.scrollY}px`;
-                profileModal.style.left = `${rect.left + window.scrollX}px`;
+        document.body.appendChild(profileModal);
 
-                // Add event listeners for the buttons
-                profileModal.querySelector('#mute-button').addEventListener('click', () => {
-                    const proceed = confirm(
-                        "Warning: The mute function is currently broken and may not work as expected. Do you want to continue?"
-                    );
-                    if (proceed) {
-                        muteUser(username); // Call the muteUser function
-                        alert(`Muted ${username}`);
-                    }
-                    document.body.removeChild(profileModal);
-                });
+        // Position the modal next to the profile picture
+        const rect = userProfilePic.getBoundingClientRect();
+        profileModal.style.top = `${rect.bottom + window.scrollY}px`;
+        profileModal.style.left = `${rect.left + window.scrollX}px`;
 
-                profileModal.querySelector('#dm-button').addEventListener('click', () => {
-                // Open a private chat with the selected user
-                openPrivateChat(username);
+        // Close the modal
+        document.getElementById('close-profile-modal').addEventListener('click', () => {
+            document.body.removeChild(profileModal);
+        });
 
-                // Remove the profile modal
-                document.body.removeChild(profileModal);
-            });
-
-                profileModal.querySelector('#tag-button').addEventListener('click', () => {
-                    messageInput.value += `@${username} `;
-                    messageInput.focus();
-                    document.body.removeChild(profileModal);
-                });
-
-                // Close the modal if clicked outside
-                const closeModal = (event) => {
-                    if (!profileModal.contains(event.target) && event.target !== userProfilePic) {
-                        document.body.removeChild(profileModal);
-                        document.removeEventListener('click', closeModal);
-                    }
-                };
-
-                setTimeout(() => {
-                    document.addEventListener('click', closeModal);
-                }, 0); // Delay to prevent immediate closure when clicking the profile picture
+        // Update bio when data is received
+        socket.on('user_data', (data) => {
+            if (data.bio) {
+                document.getElementById('user-bio').textContent = data.bio;
             }
         });
+
+        // Add mute functionality
+        document.getElementById('mute-button').addEventListener('click', () => {
+            muteUser(username);
+            //alert(`${username} has been muted.`);
+            document.body.removeChild(profileModal);
+        });
+
+        // Add direct message functionality
+        document.getElementById('dm-button').addEventListener('click', () => {
+            openPrivateChat(username);
+            document.body.removeChild(profileModal);
+        });
+
+        // Add tag functionality
+        document.getElementById('tag-button').addEventListener('click', () => {
+            messageInput.value += `@${username} `;
+            messageInput.focus();
+            document.body.removeChild(profileModal);
+        });
+
+        // Close the modal if clicked outside
+        const closeModal = (event) => {
+            if (!profileModal.contains(event.target) && event.target !== userProfilePic) {
+                document.body.removeChild(profileModal);
+                document.removeEventListener('click', closeModal);
+            }
+        };
+
+        setTimeout(() => {
+            document.addEventListener('click', closeModal);
+        }, 0); // Delay to prevent immediate closure when clicking the profile picture
+    }
+});
 
         /* Load old messages when the page loads
         socket.on('load_messages', (messages) => {
@@ -1140,7 +1373,7 @@
                     alert(
                         "Warning: Unmuting this user may cause messages to reappear broken. Refresh the page to fix any issues."
                     );
-                    alert(`${mutedUser} has been unmuted.`);
+                    //alert(`${mutedUser} has been unmuted.`);
 
                     // Bring back their messages
                     if (mutedMessages[mutedUser]) {
@@ -1178,13 +1411,16 @@
 
 
         // Fetch all messages from the database on login
-        socket.on('login_success', () => {
-            fetch('/api/messages')
-                .then(response => response.json())
-                .then(messages => {
-                    messages.forEach(message => appendMessage(message));
-                })
-                .catch(error => console.error('Error fetching messages:', error));
+        socket.on('login_success', (username) => {
+            console.log("loading messages on login")
+            console.log(username)
+            
+            socket.emit('join', { username }); // Notify the server that the user has joined
+            location.reload()
+            joinChat(username); // Automatically rejoin the chat
+            socket.emit('load_messages', {}, (messages) => {
+                messages.forEach(message => appendMessage(message));
+            });
         });
 
         // Append a message to the chat
@@ -1509,6 +1745,12 @@ socket.on('reaction_users', (data) => {
             localStorage.removeItem('profilePic');
         });
 
+        document.getElementById('logout-button').addEventListener('click', () => {
+        socket.emit('leave', { username }); // Notify the server
+        localStorage.removeItem('username'); // Clear the username from localStorage
+        location.reload(); // Reload the page to reset the app
+    });
+
         rpsButton.addEventListener('click', () => {
                 const rpsModal = document.createElement('div');
                 rpsModal.id = 'rps-modal';
@@ -1573,7 +1815,128 @@ socket.on('reaction_users', (data) => {
                     document.body.removeChild(rpsModal);
                 });
             });
-        // Handle settings button click
+
+        const tictactoeButton = document.getElementById('tictactoe-button');
+        const tictactoeModal = document.getElementById('tictactoe-modal');
+        const tictactoeBoard = document.getElementById('tictactoe-board');
+        const tictactoeStatus = document.getElementById('tictactoe-status');
+        const closeTicTacToe = document.getElementById('close-tictactoe');
+
+        let tictactoeGame = {
+            board: ['', '', '', '', '', '', '', '', ''],
+            currentPlayer: 'X',
+            isGameOver: false,
+            opponent: null,
+        };
+
+        // Open the Tic-Tac-Toe modal
+        tictactoeButton.addEventListener('click', () => {
+            console.log("Requesting to join Tic-Tac-Toe game...");
+            socket.emit('join_tictactoe', { username });
+        });
+
+        // Close the Tic-Tac-Toe modal
+        closeTicTacToe.addEventListener('click', () => {
+            tictactoeModal.style.display = 'none';
+            socket.emit('leave_tictactoe', { username });
+        });
+
+        // Reset the game
+        function resetTicTacToe() {
+            tictactoeGame.board = ['', '', '', '', '', '', '', '', ''];
+            tictactoeGame.currentPlayer = 'X';
+            tictactoeGame.isGameOver = false;
+            tictactoeStatus.textContent = '';
+            Array.from(tictactoeBoard.children).forEach((cell, index) => {
+            cell.textContent = '';
+            cell.removeEventListener('click', handleCellClick);
+            cell.addEventListener('click', () => makeMove(index));
+            });
+        }
+
+        // Handle a player's move
+        function makeMove(index) {
+            if (tictactoeGame.isGameOver || tictactoeGame.board[index] !== '' || tictactoeGame.currentPlayer !== 'X') return;
+
+            tictactoeGame.board[index] = 'X';
+            tictactoeBoard.children[index].textContent = 'X';
+            socket.emit('tictactoe_move', { index, player: 'X' });
+
+            if (checkWinner()) {
+            tictactoeStatus.textContent = `You win!`;
+            tictactoeGame.isGameOver = true;
+            socket.emit('tictactoe_game_over', { winner: username });
+            } else if (tictactoeGame.board.every(cell => cell !== '')) {
+            tictactoeStatus.textContent = "It's a tie!";
+            tictactoeGame.isGameOver = true;
+            socket.emit('tictactoe_game_over', { winner: null });
+            } else {
+            tictactoeGame.currentPlayer = 'O';
+            tictactoeStatus.textContent = "Waiting for opponent's move...";
+            }
+        }
+
+        // Check for a winner
+        function checkWinner() {
+            const winningCombinations = [
+            [0, 1, 2], [3, 4, 5], [6, 7, 8], // Rows
+            [0, 3, 6], [1, 4, 7], [2, 5, 8], // Columns
+            [0, 4, 8], [2, 4, 6],           // Diagonals
+            ];
+
+            return winningCombinations.some(combination => {
+            const [a, b, c] = combination;
+            return (
+                tictactoeGame.board[a] &&
+                tictactoeGame.board[a] === tictactoeGame.board[b] &&
+                tictactoeGame.board[a] === tictactoeGame.board[c]
+            );
+            });
+        }
+
+        // Handle opponent's move
+        socket.on('tictactoe_move', (data) => {
+            if (data.player === 'O') {
+            tictactoeGame.board[data.index] = 'O';
+            tictactoeBoard.children[data.index].textContent = 'O';
+
+            if (checkWinner()) {
+                tictactoeStatus.textContent = `Opponent wins!`;
+                tictactoeGame.isGameOver = true;
+            } else if (tictactoeGame.board.every(cell => cell !== '')) {
+                tictactoeStatus.textContent = "It's a tie!";
+                tictactoeGame.isGameOver = true;
+            } else {
+                tictactoeGame.currentPlayer = 'X';
+                tictactoeStatus.textContent = "Your turn!";
+            }
+            }
+        });
+
+        // Handle game start
+        socket.on('tictactoe_start', (data) => {
+            tictactoeGame.opponent = data.opponent;
+            tictactoeModal.style.display = 'flex';
+            resetTicTacToe();
+            tictactoeStatus.textContent = data.isFirstPlayer ? "Your turn!" : "Waiting for opponent's move...";
+            tictactoeGame.currentPlayer = data.isFirstPlayer ? 'X' : 'O';
+        });
+
+        // Handle game over
+        socket.on('tictactoe_game_over', (data) => {
+            if (data.winner) {
+            tictactoeStatus.textContent = data.winner === username ? "You win!" : "Opponent wins!";
+            } else {
+            tictactoeStatus.textContent = "It's a tie!";
+            }
+            tictactoeGame.isGameOver = true;
+        });
+
+        // Handle opponent leaving
+        socket.on('tictactoe_opponent_left', () => {
+            tictactoeStatus.textContent = "Opponent left the game.";
+            tictactoeGame.isGameOver = true;
+        });
         settingsButton.addEventListener('click', () => {
             const settingsModal = document.createElement('div');
             settingsModal.id = 'settings-modal';
@@ -1594,6 +1957,15 @@ socket.on('reaction_users', (data) => {
                 Enable Dark Mode
                 </label>
                 <br><br>
+                <label>
+            <strong>Bio:</strong>
+            <textarea id="bio-input" placeholder="Write something about yourself..." style="width: 100%; height: 60px; margin-bottom: 10px;"></textarea>
+        </label>
+        <label>
+            <strong>Profile Picture:</strong>
+            <input type="file" id="profile-pic-input" accept="image/*" style="margin-bottom: 10px;">
+        </label>
+        <button id="save-settings" style="margin-top: 10px; padding: 10px 20px; background-color: #007BFF; color: white; border: none; border-radius: 5px; cursor: pointer;">Save</button>
                 <button id="close-settings">Close</button>
             </div>
             `;
@@ -1609,6 +1981,50 @@ socket.on('reaction_users', (data) => {
                     document.body.classList.remove('dark-mode');
                 }
             });
+
+const bioInput = document.getElementById('bio-input');
+const profilePicInput = document.getElementById('profile-pic-input');
+const saveSettingsButton = document.getElementById('save-settings');
+const closeSettingsButton = document.getElementById('close-settings');
+
+// Open settings modal
+settingsButton.addEventListener('click', () => {
+    settingsModal.style.display = 'flex';
+
+    // Load current bio and profile picture
+    socket.emit('get_user_data', { username });
+});
+
+// Close settings modal
+closeSettingsButton.addEventListener('click', () => {
+    settingsModal.style.display = 'none';
+});
+
+// Save bio and profile picture
+saveSettingsButton.addEventListener('click', () => {
+    const bio = bioInput.value.trim();
+    const profilePicFile = profilePicInput.files[0];
+
+    if (profilePicFile) {
+        const reader = new FileReader();
+        reader.onload = () => {
+            const profilePic = reader.result; // Base64 image
+            socket.emit('update_user_data', { username, bio, profilePic });
+        };
+        reader.readAsDataURL(profilePicFile);
+    } else {
+        socket.emit('update_user_data', { username, bio });
+    }
+
+    alert('Settings updated!');
+    settingsModal.style.display = 'none';
+});
+
+// Listen for user data
+socket.on('user_data', (data) => {
+    bioInput.value = data.bio || '';
+    // Optionally, display the current profile picture
+});
 
             // Add the event listener directly to messagesDiv
             messagesDiv.addEventListener('click', (e) => {
@@ -1735,6 +2151,12 @@ function switchPrivateChat(username) {
     privateMessageBox.dataset.activeChat = username;
 }
 
+// Function to adjust the height of the private message box based on its content
+function adjustPrivateMessageBoxHeight() {
+    const contentHeight = privateMessageContent.scrollHeight;
+    privateMessageBox.style.height = `${contentHeight + 50}px`; // Add padding for input and margins
+}
+
 // Handle Sending a Private Message
 privateMessageForm.addEventListener('submit', (e) => {
     e.preventDefault();
@@ -1751,7 +2173,31 @@ privateMessageForm.addEventListener('submit', (e) => {
 
         // Clear the input field
         privateMessageInput.value = '';
+
+        // Adjust the height of the private message box
+        adjustPrivateMessageBoxHeight();
     }
+});
+
+// Adjust the height when receiving a private message
+socket.on('receive_private_message', (data) => {
+    const { sender, message } = data;
+
+    // Open a private chat tab if it doesn't exist
+    if (!privateChats[sender]) {
+        openPrivateChat(sender); // Create the tab and initialize the chat
+    }
+
+    // Append the message to the chat history
+    privateChats[sender].push(`${sender}: ${message}`);
+
+    // If the chat is active, display the new message
+    if (privateMessageBox.dataset.activeChat === sender) {
+        switchPrivateChat(sender);
+    }
+
+    // Adjust the height of the private message box
+    adjustPrivateMessageBoxHeight();
 });
 
 // Request notification permission on page load
