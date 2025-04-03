@@ -256,6 +256,9 @@ def handle_update_user_data(data):
         cursor.execute('UPDATE users SET bio = ?, profilePic = ? WHERE username = ?', (bio, profilePic, username))
         conn.commit()
 
+    # Notify all clients about the updated profile picture
+    emit('profile_pic_updated', {'username': username, 'profilePic': profilePic}, broadcast=True)
+
 @socketio.on('add_reaction')
 def handle_add_reaction(data):
     message_id = data.get('id')

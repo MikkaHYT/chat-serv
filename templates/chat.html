@@ -2005,6 +2005,25 @@ closeSettingsButton.addEventListener('click', () => {
     settingsModal.style.display = 'none';
 });
 
+// Listen for profile picture updates
+socket.on('profile_pic_updated', (data) => {
+    const { username: updatedUsername, profilePic } = data;
+
+    // Update the profile picture for all messages from the updated user
+    const userProfileImages = document.querySelectorAll(`.message img`);
+    userProfileImages.forEach(img => {
+        const messageUsername = img.nextElementSibling.querySelector('strong').textContent;
+        if (messageUsername === updatedUsername) {
+            img.src = profilePic;
+        }
+    });
+
+    // If the current user updated their profile picture, update it in localStorage
+    if (updatedUsername === username) {
+        localStorage.setItem('profilePic', profilePic);
+    }
+});
+
 // Save bio and profile picture
 saveSettingsButton.addEventListener('click', () => {
     const bio = bioInput.value.trim();
@@ -2014,15 +2033,24 @@ saveSettingsButton.addEventListener('click', () => {
         const reader = new FileReader();
         reader.onload = () => {
             const profilePic = reader.result; // Base64 image
-            socket.emit('update_user_data', { username, bio, profilePic });
+            socket.emit('update_user_data', { username, bio, profilePic }); // Send updated data to the server
+            localStorage.setItem('profilePic', profilePic); // Save to local storage
+
+            // Update the profile picture in the chat UI
+            const userProfileImages = document.querySelectorAll(`.message img[src="${localStorage.getItem('profilePic')}"]`);
+            userProfileImages.forEach(img => {
+                img.src = profilePic;
+            });
+
+            alert('Settings updated!');
+            settingsModal.style.display = 'none';
         };
         reader.readAsDataURL(profilePicFile);
     } else {
-        socket.emit('update_user_data', { username, bio });
+        socket.emit('update_user_data', { username, bio }); // Update only the bio if no profile picture is uploaded
+        alert('Settings updated!');
+        settingsModal.style.display = 'none';
     }
-
-    alert('Settings updated!');
-    settingsModal.style.display = 'none';
 });
 
 // Handle "Mute Notifications" toggle
@@ -2203,6 +2231,18 @@ tictactoeButton.addEventListener('click', () => {
     iframe.style.width = '100%';
     iframe.style.height = '100%';
     iframe.style.border = 'none';
+    // Attempt to mute the iframe
+    iframe.addEventListener('load', () => {
+        try {
+            const iframeDocument = iframe.contentDocument || iframe.contentWindow.document;
+            const mediaElements = iframeDocument.querySelectorAll('audio, video');
+            mediaElements.forEach((media) => {
+                media.muted = true;
+            });
+        } catch (error) {
+            console.error('Unable to mute iframe content:', error);
+        }
+    });
 
     // Append elements to the Tic-Tac-Toe box
     tictactoeBox.appendChild(closeButton);
