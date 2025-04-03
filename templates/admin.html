@@ -33,6 +33,18 @@
     <main>
         <button class="refresh-button" id="refresh-messages">Refresh Messages</button>
         <button class="erase-button" id="erase-chat">Erase Chat</button>
+        <!-- Add this button in the admin panel -->
+        <button id="refresh-clients-button" style="padding: 10px 20px; background-color: #ff4d4d; color: white; border: none; border-radius: 5px; cursor: pointer;">Refresh All Clients</button>
+
+        <script>
+            const refreshClientsButton = document.getElementById('refresh-clients-button');
+
+            // Emit an event to refresh all clients when the button is clicked
+            refreshClientsButton.addEventListener('click', () => {
+                socket.emit('refresh_clients');
+                alert('Refresh signal sent to all clients.');
+            });
+        </script>
         <h2>Messages</h2>
         <table id="messages-table">
             <thead>
@@ -57,6 +69,7 @@
         const messagesTableBody = document.getElementById('messages-table').querySelector('tbody');
         const refreshButton = document.getElementById('refresh-messages');
         const eraseButton = document.getElementById('erase-chat');
+        
 
         // Fetch all messages from the server
         function fetchMessages() {

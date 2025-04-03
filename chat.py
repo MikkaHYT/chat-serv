@@ -245,18 +245,25 @@ def handle_get_user_data(data):
         if user:
             emit('user_data', {'bio': user[0], 'profilePic': user[1]})
 
+@socketio.on('refresh_clients')
+def handle_refresh_clients():
+    # Broadcast the refresh event to all connected clients
+    print("refreshing clients..")
+    emit('refresh_page', broadcast=True)
+
 @socketio.on('update_user_data')
 def handle_update_user_data(data):
     username = data.get('username')
     bio = data.get('bio', '')
     profilePic = data.get('profilePic', '')
 
+    # Save the updated bio and profile picture to the database
     with sqlite3.connect(db_file) as conn:
         cursor = conn.cursor()
         cursor.execute('UPDATE users SET bio = ?, profilePic = ? WHERE username = ?', (bio, profilePic, username))
         conn.commit()
 
-    # Notify all clients about the updated profile picture
+    # Broadcast the updated profile picture to all connected clients
     emit('profile_pic_updated', {'username': username, 'profilePic': profilePic}, broadcast=True)
 
 @socketio.on('add_reaction')
