@@ -954,20 +954,22 @@
             }
         })();
 
-        // Load old messages when the page loads
-        socket.on('load_messages', (messages) => {
-            const mutedUsers = JSON.parse(localStorage.getItem('mutedUsers')) || [];
-            messages.forEach((message) => {
-                if (mutedUsers.includes(message.username)) {
-                    // Store muted messages persistently
-                    if (!mutedMessages[message.username]) mutedMessages[message.username] = [];
-                    mutedMessages[message.username].push(message);
-                } else {
-                    appendMessage(message);
-                }
+        // Ensure this is registered only once, at the top level of your script
+        if (!window.loadMessagesListenerRegistered) {
+            console.log('Registering load_messages listener');
+            socket.off('load_messages'); // Remove any existing listeners
+            socket.on('load_messages', (messages) => {
+                console.log('load_messages event received');
+                const mutedUsers = JSON.parse(localStorage.getItem('mutedUsers')) || [];
+                messagesDiv.innerHTML = ''; // Clear the messages div to avoid duplicates
+                messages.forEach((message) => {
+                    if (!mutedUsers.includes(message.username)) {
+                        appendMessage(message);
+                    }
+                });
             });
-            localStorage.setItem('mutedMessages', JSON.stringify(mutedMessages)); // Save muted messages
-        });
+            window.loadMessagesListenerRegistered = true; // Mark the listener as registered
+        }
 
         // Function to mute a user
         function muteUser(username) {
@@ -1104,7 +1106,7 @@
             }
         });
 
-        // Load old messages when the page loads
+        /* Load old messages when the page loads
         socket.on('load_messages', (messages) => {
             const mutedUsers = JSON.parse(localStorage.getItem('mutedUsers')) || [];
             messages.forEach((message) => {
@@ -1117,7 +1119,7 @@
                 }
             });
             localStorage.setItem('mutedMessages', JSON.stringify(mutedMessages)); // Save muted messages
-        });
+        }); */
 
         // Function to update the muted users list
         function updateMutedUsersList() {
@@ -1150,13 +1152,19 @@
             });
         }
 
-        // Load old messages when the page loads
+        // Listen for admin broadcast alerts
+        socket.on('receive_alert', (data) => {
+            const alertMessage = data.alert || 'Broadcast Alert';
+            alert("Admin Alert: "+alertMessage); // Display the alert message to the user
+        });
+
+        /* Load old messages when the page loads
         socket.on('load_messages', (messages) => {
             const mutedUsers = JSON.parse(localStorage.getItem('mutedUsers')) || [];
             messages
                 .filter((message) => !mutedUsers.includes(message.username)) // Exclude messages from muted users
                 .forEach((message) => appendMessage(message));
-        });
+        }); */
 
         // Handle sending a message
         messageForm.addEventListener('submit', (e) => {
@@ -1387,6 +1395,17 @@ socket.on('reaction_users', (data) => {
                 messageElement.remove();
             }
         });
+
+        // Listen for the admin chat erased event
+        socket.on('admin_chat_erased', () => {
+            // Clear the messages div
+            messagesDiv.innerHTML = '';
+
+            // Notify the user that the chat has been erased
+            alert('The chat has been erased by an admin.');
+        });
+
+        
 
         // Mark user as online after login
         socket.on('connect', () => {

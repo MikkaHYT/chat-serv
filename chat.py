@@ -67,6 +67,10 @@ def private_chat():
 def sh():
     return render_template('sh.html')
 
+@app.route('/admin')
+def admin():
+    return render_template('admin.html')
+
 # Socket.IO events
 #@socketio.on('connect')
 #def handle_connect():
@@ -323,6 +327,49 @@ def handle_mute_user(data):
         print(f"{username} has been muted")
         # Broadcast to all clients that the user is muted
         emit('user_muted', {'username': username}, broadcast=True)
+
+@socketio.on('admin_fetch_messages')
+def handle_admin_fetch_messages():
+    messages = load_messages_from_db()
+    emit('admin_messages', messages)
+
+@socketio.on('admin_edit_message')
+def handle_admin_edit_message(data):
+    message_id = data.get('id')
+    new_message = data.get('message')
+    with sqlite3.connect(db_file) as conn:
+        cursor = conn.cursor()
+        cursor.execute('UPDATE messages SET message = ? WHERE id = ?', (new_message, message_id))
+        conn.commit()
+    # Emit the updated message to all clients
+    emit('update_message', {'id': message_id, 'message': f"{new_message}"}, broadcast=True)
+
+@socketio.on('admin_delete_message')
+def handle_admin_delete_message(data):
+    message_id = data.get('id')
+    with sqlite3.connect(db_file) as conn:
+        cursor = conn.cursor()
+        cursor.execute('DELETE FROM messages WHERE id = ?', (message_id,))
+        conn.commit()
+    # Notify all clients about the deleted message
+    emit('remove_message', {'id': message_id}, broadcast=True)
+
+@socketio.on('admin_broadcast')
+def handle_admin_broadcast(data):
+        print("Admin broadcast initiated")
+        print(data)
+        alert_message = data.get('alert', 'Broadcast Alert')
+        # Emit the broadcast alert to all connected clients
+        emit('receive_alert', {'alert': alert_message}, broadcast=True)
+
+@socketio.on('admin_erase_chat')
+def handle_admin_erase_chat():
+    with sqlite3.connect(db_file) as conn:
+        cursor = conn.cursor()
+        cursor.execute('DELETE FROM messages')
+        conn.commit()
+    # Notify all clients that the chat has been erased
+    emit('admin_chat_erased', broadcast=True)
 
 if __name__ == '__main__':
     socketio.run(app, debug=True)
