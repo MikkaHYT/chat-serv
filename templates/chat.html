@@ -1749,7 +1749,6 @@ function sendNotification(title, body, icon) {
 
 // Handle receiving a message
 socket.on('receive_message', (data) => {
-    appendMessage(data);
 
     // Send a desktop notification for the received message
     if (data.username !== username) { // Avoid notifying for own messages
