@@ -1830,10 +1830,10 @@ socket.on('reaction_users', (data) => {
         };
 
         // Open the Tic-Tac-Toe modal
-        tictactoeButton.addEventListener('click', () => {
-            console.log("Requesting to join Tic-Tac-Toe game...");
-            socket.emit('join_tictactoe', { username });
-        });
+        //tictactoeButton.addEventListener('click', () => {
+        //    console.log("Requesting to join Tic-Tac-Toe game...");
+        //    socket.emit('join_tictactoe', { username });
+        //});
 
         // Close the Tic-Tac-Toe modal
         closeTicTacToe.addEventListener('click', () => {
@@ -1958,6 +1958,11 @@ socket.on('reaction_users', (data) => {
                 </label>
                 <br><br>
                 <label>
+                <input type="checkbox" id="mute-notifications-toggle">
+                Mute Notifications
+            </label>
+            <br><br>
+                <label>
             <strong>Bio:</strong>
             <textarea id="bio-input" placeholder="Write something about yourself..." style="width: 100%; height: 60px; margin-bottom: 10px;"></textarea>
         </label>
@@ -2019,6 +2024,30 @@ saveSettingsButton.addEventListener('click', () => {
     alert('Settings updated!');
     settingsModal.style.display = 'none';
 });
+
+// Handle "Mute Notifications" toggle
+const muteNotificationsToggle = document.getElementById('mute-notifications-toggle');
+
+// Load the mute notifications setting from localStorage
+muteNotificationsToggle.checked = localStorage.getItem('mute-notifications') === 'enabled';
+
+// Save the setting when toggled
+muteNotificationsToggle.addEventListener('change', () => {
+    if (muteNotificationsToggle.checked) {
+        console.log("Notification enabled")
+        localStorage.setItem('mute-notifications', 'enabled');
+    } else {
+        console.log("Notification disabled")
+        localStorage.setItem('mute-notifications', 'disabled');
+    }
+});
+
+// Modify the sendNotification function to respect the mute setting
+function sendNotification(title, body, icon) {
+    if (localStorage.getItem('mute-notifications') !== 'enabled' && Notification.permission === "granted") {
+        new Notification(title, { body, icon });
+    }
+}
 
 // Listen for user data
 socket.on('user_data', (data) => {
@@ -2131,6 +2160,93 @@ function openPrivateChat(username) {
     // Show the private message box
     privateMessageBox.style.display = 'block';
 }
+
+// Handle Tic-Tac-Toe button click
+tictactoeButton.addEventListener('click', () => {
+    // Create the Tic-Tac-Toe box
+    const tictactoeBox = document.createElement('div');
+    tictactoeBox.id = 'tictactoe-box';
+    tictactoeBox.style.position = 'absolute';
+    tictactoeBox.style.top = '100px';
+    tictactoeBox.style.left = '100px';
+    tictactoeBox.style.width = '400px';
+    tictactoeBox.style.height = '400px';
+    tictactoeBox.style.background = '#fff';
+    tictactoeBox.style.border = '1px solid #ccc';
+    tictactoeBox.style.borderRadius = '5px';
+    tictactoeBox.style.boxShadow = '0 4px 6px rgba(0, 0, 0, 0.1)';
+    tictactoeBox.style.zIndex = '1000';
+    tictactoeBox.style.resize = 'both';
+    tictactoeBox.style.overflow = 'hidden';
+
+    // Add the close button
+    const closeButton = document.createElement('button');
+    closeButton.textContent = 'X';
+    closeButton.style.position = 'absolute';
+    closeButton.style.top = '5px';
+    closeButton.style.right = '5px';
+    closeButton.style.background = '#ff4d4d';
+    closeButton.style.color = '#fff';
+    closeButton.style.border = 'none';
+    closeButton.style.borderRadius = '50%';
+    closeButton.style.width = '25px';
+    closeButton.style.height = '25px';
+    closeButton.style.cursor = 'pointer';
+    closeButton.style.fontWeight = 'bold';
+    closeButton.addEventListener('click', () => {
+        document.body.removeChild(tictactoeBox);
+    });
+
+    // Add the iframe
+    const iframe = document.createElement('iframe');
+    iframe.src = 'https://lnahtml.github.io/a8/subway-surfers-newyork/'; // Replace with the actual URL for your Tic-Tac-Toe game
+    iframe.style.width = '100%';
+    iframe.style.height = '100%';
+    iframe.style.border = 'none';
+
+    // Append elements to the Tic-Tac-Toe box
+    tictactoeBox.appendChild(closeButton);
+    tictactoeBox.appendChild(iframe);
+
+    // Append the Tic-Tac-Toe box to the body
+    document.body.appendChild(tictactoeBox);
+
+    // Make the Tic-Tac-Toe box draggable
+    let isDragging = false;
+    let offsetX, offsetY;
+
+    tictactoeBox.addEventListener('mousedown', (e) => {
+        if (e.target === closeButton) return; // Prevent dragging when clicking the close button
+        isDragging = true;
+        offsetX = e.clientX - tictactoeBox.offsetLeft;
+        offsetY = e.clientY - tictactoeBox.offsetTop;
+        tictactoeBox.style.transition = 'none'; // Disable transition during drag
+    });
+
+    const onMouseMove = (e) => {
+        if (isDragging) {
+            tictactoeBox.style.left = `${e.clientX - offsetX}px`;
+            tictactoeBox.style.top = `${e.clientY - offsetY}px`;
+        }
+    };
+
+    const onMouseUp = () => {
+        isDragging = false;
+        tictactoeBox.style.transition = ''; // Re-enable transition after drag
+        document.removeEventListener('mousemove', onMouseMove);
+        document.removeEventListener('mouseup', onMouseUp);
+    };
+
+    tictactoeBox.addEventListener('mousedown', (e) => {
+        if (e.target === closeButton) return; // Prevent dragging when clicking the close button
+        isDragging = true;
+        offsetX = e.clientX - tictactoeBox.offsetLeft;
+        offsetY = e.clientY - tictactoeBox.offsetTop;
+        tictactoeBox.style.transition = 'none'; // Disable transition during drag
+        document.addEventListener('mousemove', onMouseMove);
+        document.addEventListener('mouseup', onMouseUp);
+    });
+});
 
 // Switch to a Private Chat Tab
 function switchPrivateChat(username) {

@@ -80,6 +80,10 @@ def sh():
 def admin():
     return render_template('admin.html')
 
+@app.route('/surf')
+def ss():
+    return render_template('game.html')
+
 # Socket.IO events
 #@socketio.on('connect')
 #def handle_connect():
@@ -439,71 +443,63 @@ def handle_admin_erase_chat():
 
 @socketio.on('join_tictactoe')
 def handle_join_tictactoe(data):
-        username = data.get('username')
-        print(f"{username} has joined the Tic-Tac-Toe game")
-        if username:
-            if 'tictactoe_game' not in globals():
-                global tictactoe_game
-                tictactoe_game = {
-                    'board': [''] * 9,
-                    'players': [],
-                    'currentPlayer': 'X',
-                    'isGameOver': False
-                }
+    username = data.get('username')
+    if 'tictactoe_game' not in globals():
+        global tictactoe_game
+        tictactoe_game = {
+            'board': [''] * 9,
+            'players': [],
+            'currentPlayer': '',
+            'isGameOver': False
+        }
 
-            if len(tictactoe_game['players']) < 2:
-                tictactoe_game['players'].append(username)
-                join_room(username)
-                if len(tictactoe_game['players']) == 2:
-                    player1, player2 = tictactoe_game['players']
-                    socketio.emit('tictactoe_start', {'opponent': player2}, room=player1)
-                    socketio.emit('tictactoe_start', {'opponent': player1}, room=player2)
-                else:
-                    emit('tictactoe_waiting', {'message': 'Waiting for another player to join...'})
-            else:
-                emit('tictactoe_full', {'message': 'Game is full. Please wait for the next round.'})
+    if len(tictactoe_game['players']) < 2:
+        tictactoe_game['players'].append(username)
+        if len(tictactoe_game['players']) == 2:
+            tictactoe_game['currentPlayer'] = tictactoe_game['players'][0]
+            player1, player2 = tictactoe_game['players']
+            socketio.emit('tictactoe_start', {'opponent': player2, 'isFirstPlayer': True}, room=player1)
+            socketio.emit('tictactoe_start', {'opponent': player1, 'isFirstPlayer': False}, room=player2)
+        else:
+            emit('tictactoe_waiting', {'message': 'Waiting for another player to join...'})
+    else:
+        emit('tictactoe_full', {'message': 'Game is full. Please wait for the next round.'})
 
 @socketio.on('tictactoe_move')
 def handle_tictactoe_move(data):
-        username = data.get('username')
-        index = data.get('index')
-        player = data.get('player')
+    username = data.get('username')
+    index = data.get('index')
 
-        if tictactoe_game['isGameOver'] or tictactoe_game['board'][index] != '' or tictactoe_game['currentPlayer'] != player:
-            return
+    if tictactoe_game['isGameOver'] or tictactoe_game['board'][index] != '' or tictactoe_game['currentPlayer'] != username:
+        return
 
-        tictactoe_game['board'][index] = player
-        tictactoe_game['currentPlayer'] = 'O' if player == 'X' else 'X'
+    tictactoe_game['board'][index] = 'X' if tictactoe_game['currentPlayer'] == tictactoe_game['players'][0] else 'O'
+    tictactoe_game['currentPlayer'] = tictactoe_game['players'][0] if tictactoe_game['currentPlayer'] == tictactoe_game['players'][1] else tictactoe_game['players'][1]
 
-        socketio.emit('tictactoe_update', {'board': tictactoe_game['board'], 'currentPlayer': tictactoe_game['currentPlayer']}, broadcast=True)
+    socketio.emit('tictactoe_update', {
+        'board': tictactoe_game['board'],
+        'currentPlayer': tictactoe_game['currentPlayer']
+    }, broadcast=True)
 
-        winner = check_tictactoe_winner()
-        if winner:
-            tictactoe_game['isGameOver'] = True
-            socketio.emit('tictactoe_game_over', {'winner': winner}, broadcast=True)
-        elif all(cell != '' for cell in tictactoe_game['board']):
-            tictactoe_game['isGameOver'] = True
-            socketio.emit('tictactoe_game_over', {'winner': None}, broadcast=True)
-
-@socketio.on('leave_tictactoe')
-def handle_leave_tictactoe(data):
-        username = data.get('username')
-        if username in tictactoe_game['players']:
-            tictactoe_game['players'].remove(username)
-            tictactoe_game['isGameOver'] = True
-            socketio.emit('tictactoe_game_over', {'winner': None}, broadcast=True)
+    winner = check_tictactoe_winner()
+    if winner:
+        tictactoe_game['isGameOver'] = True
+        socketio.emit('tictactoe_game_over', {'winner': winner}, broadcast=True)
+    elif all(cell != '' for cell in tictactoe_game['board']):
+        tictactoe_game['isGameOver'] = True
+        socketio.emit('tictactoe_game_over', {'winner': None}, broadcast=True)
 
 def check_tictactoe_winner():
-        winning_combinations = [
-            [0, 1, 2], [3, 4, 5], [6, 7, 8],  # Rows
-            [0, 3, 6], [1, 4, 7], [2, 5, 8],  # Columns
-            [0, 4, 8], [2, 4, 6]              # Diagonals
-        ]
-        for combo in winning_combinations:
-            a, b, c = combo
-            if tictactoe_game['board'][a] == tictactoe_game['board'][b] == tictactoe_game['board'][c] and tictactoe_game['board'][a] != '':
-                return tictactoe_game['board'][a]
-        return None
+    winning_combinations = [
+        [0, 1, 2], [3, 4, 5], [6, 7, 8],  # Rows
+        [0, 3, 6], [1, 4, 7], [2, 5, 8],  # Columns
+        [0, 4, 8], [2, 4, 6]              # Diagonals
+    ]
+    for combo in winning_combinations:
+        a, b, c = combo
+        if tictactoe_game['board'][a] == tictactoe_game['board'][b] == tictactoe_game['board'][c] and tictactoe_game['board'][a] != '':
+            return tictactoe_game['board'][a]
+    return None
 
 if __name__ == '__main__':
     socketio.run(app, debug=True)
