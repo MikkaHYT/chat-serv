@@ -1648,6 +1648,32 @@ document.body.addEventListener('click', (e) => {
     }
 });
 
+// Make the private message box draggable
+privateMessageBox.style.position = 'absolute';
+privateMessageBox.style.cursor = 'move';
+
+let isDragging = false;
+let offsetX, offsetY;
+
+privateMessageBox.addEventListener('mousedown', (e) => {
+    isDragging = true;
+    offsetX = e.clientX - privateMessageBox.offsetLeft;
+    offsetY = e.clientY - privateMessageBox.offsetTop;
+    privateMessageBox.style.transition = 'none'; // Disable transition during drag
+});
+
+document.addEventListener('mousemove', (e) => {
+    if (isDragging) {
+        privateMessageBox.style.left = `${e.clientX - offsetX}px`;
+        privateMessageBox.style.top = `${e.clientY - offsetY}px`;
+    }
+});
+
+document.addEventListener('mouseup', () => {
+    isDragging = false;
+    privateMessageBox.style.transition = ''; // Re-enable transition after drag
+});
+
 // Open a Private Chat Tab
 function openPrivateChat(username) {
     if (!privateChats[username]) {
@@ -1709,6 +1735,45 @@ privateMessageForm.addEventListener('submit', (e) => {
     }
 });
 
+// Request notification permission on page load
+if (Notification && Notification.permission !== "granted") {
+    Notification.requestPermission();
+}
+
+// Function to send a desktop notification
+function sendNotification(title, body, icon) {
+    if (Notification && Notification.permission === "granted") {
+        new Notification(title, { body, icon });
+    }
+}
+
+// Handle receiving a message
+socket.on('receive_message', (data) => {
+    appendMessage(data);
+
+    // Send a desktop notification for the received message
+    if (data.username !== username) { // Avoid notifying for own messages
+        sendNotification(
+            `${data.username} sent a message`,
+            data.message || "You have a new message!",
+            data.profilePic || 'https://media.tenor.com/fnVo42SgddYAAAAM/dog.gif'
+        );
+    }
+});
+
+// Request notification permission on page load
+window.addEventListener('load', () => {
+    if (Notification && Notification.permission !== "granted") {
+        Notification.requestPermission().then(permission => {
+            if (permission === "granted") {
+                console.log("Notification permission granted.");
+            } else {
+                console.log("Notification permission denied.");
+            }
+        });
+    }
+});
+
 /// Handle Receiving a Private Message
 socket.on('receive_private_message', (data) => {
     const { sender, message } = data;
@@ -1743,18 +1808,19 @@ if (tab) {
     if (!tab.querySelector('.unread-badge')) {
         const badge = document.createElement('span');
         badge.classList.add('unread-badge');
-        badge.textContent = '1'; // Start with 1 unread message
         badge.style.backgroundColor = 'red';
-        badge.style.color = 'white';
+        badge.style.width = '10px';
+        badge.style.height = '10px';
         badge.style.borderRadius = '50%';
-        badge.style.padding = '2px 5px';
+        badge.style.display = 'inline-block';
         badge.style.marginLeft = '5px';
         tab.appendChild(badge);
+    }
     } else {
         const badge = tab.querySelector('.unread-badge');
         badge.textContent = parseInt(badge.textContent) + 1; // Increment unread count
     }
-}
+
 
         
         
