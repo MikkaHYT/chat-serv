@@ -577,6 +577,7 @@ socket.on('register_failure', (data) => {
                     <button id="game-button">Rock-Paper-Scissors</button>
                     <button id="tictactoe-button">Subway Surfers</button> <!-- New button -->
                     <button id="force-button">Force.io</button> <!-- New button -->
+                    <button id="fps-button">my shooty game i made</button> <!-- New button -->
                     <button id="superhot-button" onclick="window.location.href='/sh'">SUPERHOT</button>
             <!--    <button id="placeholder-option-2">Placeholder Option 2</button>
                     <button id="placeholder-option-3">Placeholder Option 3</button> -->
@@ -1822,10 +1823,15 @@ socket.on('reaction_users', (data) => {
 
         const tictactoeButton = document.getElementById('tictactoe-button');
         const forceButton = document.getElementById('force-button');
+        const fpsButton = document.getElementById('fps-button');
         const tictactoeModal = document.getElementById('tictactoe-modal');
         const tictactoeBoard = document.getElementById('tictactoe-board');
         const tictactoeStatus = document.getElementById('tictactoe-status');
         const closeTicTacToe = document.getElementById('close-tictactoe');
+
+        fpsButton.addEventListener('click', () => {
+            window.open('https://814850.xyz/fps', '_blank'); 
+        });
 
         let tictactoeGame = {
             board: ['', '', '', '', '', '', '', '', ''],
@@ -2414,6 +2420,45 @@ forceButton.addEventListener('click', () => {
         document.addEventListener('mousemove', onMouseMove);
         document.addEventListener('mouseup', onMouseUp);
     });
+});
+
+// Handle force button click
+forceButton.addEventListener('click', () => {
+    // Create the Tic-Tac-Toe box
+    const forceBox = document.createElement('div');
+    forceBox.id = 'force-box';
+    forceBox.style.position = 'absolute';
+    forceBox.style.top = '100px';
+    forceBox.style.left = '100px';
+    forceBox.style.width = '700px';
+    forceBox.style.height = '430px';
+    forceBox.style.background = '#fff';
+    forceBox.style.border = '1px solid #ccc';
+    forceBox.style.borderRadius = '5px';
+    forceBox.style.boxShadow = '0 4px 6px rgba(0, 0, 0, 0.1)';
+    forceBox.style.zIndex = '1000';
+    forceBox.style.resize = 'both';
+    forceBox.style.overflow = 'hidden';
+
+    // Add the close button
+    const closeButton = document.createElement('button');
+    closeButton.textContent = 'X';
+    closeButton.style.position = 'absolute';
+    closeButton.style.top = '5px';
+    closeButton.style.right = '5px';
+    closeButton.style.background = '#ff4d4d';
+    closeButton.style.color = '#fff';
+    closeButton.style.border = 'none';
+    closeButton.style.borderRadius = '50%';
+    closeButton.style.width = '25px';
+    closeButton.style.height = '25px';
+    closeButton.style.cursor = 'pointer';
+    closeButton.style.fontWeight = 'bold';
+    closeButton.addEventListener('click', () => {
+        document.body.removeChild(forceBox);
+    });
+
+    
 });
 
 
