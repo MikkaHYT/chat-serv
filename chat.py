@@ -67,6 +67,10 @@ def private_chat():
 def sh():
     return render_template('sh.html')
 
+@app.route('/fps')
+def fps():
+    return render_template('fps.html')
+
 # Socket.IO events
 #@socketio.on('connect')
 #def handle_connect():
