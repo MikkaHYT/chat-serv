@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Collaborative Whiteboard</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.5.4/socket.io.min.js"></script>
+    <style>
+        body {
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .toolbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: 100%;
+            background-color: #f4f4f4;
+            padding: 10px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+        .toolbar button, .toolbar select {
+            padding: 8px 12px;
+            margin: 0 5px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            background-color: #fff;
+            cursor: pointer;
+        }
+        .toolbar button:hover, .toolbar select:hover {
+            background-color: #e0e0e0;
+        }
+        canvas {
+            border: 1px solid #000;
+            cursor: crosshair;
+        }
+    </style>
+</head>
+<body>
+    <div class="toolbar">
+        <button id="pen">Pen</button>
+        <button id="rectangle">Rectangle</button>
+        <button id="circle">Circle</button>
+        <select id="color">
+            <option value="black">Black</option>
+            <option value="red">Red</option>
+            <option value="blue">Blue</option>
+            <option value="green">Green</option>
+        </select>
+    </div>
+    <canvas id="whiteboard" width="800" height="600"></canvas>
+
+    <script>
+        const socket = io();
+        const canvas = document.getElementById('whiteboard');
+        const ctx = canvas.getContext('2d');
+        let drawing = false;
+        let currentTool = 'pen';
+        let startX, startY;
+        let color = 'black';
+
+        // Toolbar actions
+        document.getElementById('pen').addEventListener('click', () => currentTool = 'pen');
+        document.getElementById('rectangle').addEventListener('click', () => currentTool = 'rectangle');
+        document.getElementById('circle').addEventListener('click', () => currentTool = 'circle');
+        document.getElementById('color').addEventListener('change', (e) => color = e.target.value);
+
+        // Load whiteboard data on page load
+        socket.emit('load_whiteboard');
+
+        // Drawing logic
+        canvas.addEventListener('mousedown', (e) => {
+            drawing = true;
+            startX = e.offsetX;
+            startY = e.offsetY;
+        });
+
+        canvas.addEventListener('mousemove', (e) => {
+            if (drawing && currentTool === 'pen') {
+                const x = e.offsetX;
+                const y = e.offsetY;
+                drawLine(startX, startY, x, y, color);
+                socket.emit('whiteboard_draw', { tool: 'pen', startX, startY, x, y, color });
+                startX = x;
+                startY = y;
+            }
+        });
+
+        canvas.addEventListener('mouseup', (e) => {
+            if (drawing) {
+                const x = e.offsetX;
+                const y = e.offsetY;
+                if (currentTool === 'rectangle') {
+                    drawRectangle(startX, startY, x - startX, y - startY, color);
+                    socket.emit('whiteboard_draw', { tool: 'rectangle', startX, startY, width: x - startX, height: y - startY, color });
+                } else if (currentTool === 'circle') {
+                    const radius = Math.sqrt(Math.pow(x - startX, 2) + Math.pow(y - startY, 2));
+                    drawCircle(startX, startY, radius, color);
+                    socket.emit('whiteboard_draw', { tool: 'circle', startX, startY, radius, color });
+                }
+                // Save the whiteboard automatically
+                socket.emit('save_whiteboard');
+            }
+            drawing = false;
+        });
+
+        // Drawing functions
+        function drawLine(x1, y1, x2, y2, color) {
+            ctx.strokeStyle = color;
+            ctx.beginPath();
+            ctx.moveTo(x1, y1);
+            ctx.lineTo(x2, y2);
+            ctx.stroke();
+        }
+
+        function drawRectangle(x, y, width, height, color) {
+            ctx.fillStyle = color;
+            ctx.fillRect(x, y, width, height);
+        }
+
+        function drawCircle(x, y, radius, color) {
+            ctx.fillStyle = color;
+            ctx.beginPath();
+            ctx.arc(x, y, radius, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        // Socket.IO events
+        socket.on('whiteboard_update', (data) => {
+            if (data.tool === 'pen') {
+                drawLine(data.startX, data.startY, data.x, data.y, data.color);
+            } else if (data.tool === 'rectangle') {
+                drawRectangle(data.startX, data.startY, data.width, data.height, data.color);
+            } else if (data.tool === 'circle') {
+                drawCircle(data.startX, data.startY, data.radius, data.color);
+            }
+        });
+
+        socket.on('whiteboard_data', (data) => {
+            data.forEach((item) => {
+                if (item.tool === 'pen') {
+                    drawLine(item.startX, item.startY, item.x, item.y, item.color);
+                } else if (item.tool === 'rectangle') {
+                    drawRectangle(item.startX, item.startY, item.width, item.height, item.color);
+                } else if (item.tool === 'circle') {
+                    drawCircle(item.startX, item.startY, item.radius, item.color);
+                }
+            });
+        });
+    </script>
+</body>
+</html>

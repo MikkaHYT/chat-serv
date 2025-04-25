@@ -115,7 +115,16 @@
             border: 2px solid #007BFF;
         }
 
+        .message-time {
+            position: absolute; /* Position the time relative to the .message-content */
+            top: 5px; /* Adjust the vertical position */
+            right: 10px; /* Adjust the horizontal position */
+            font-size: 12px;
+            color: rgba(128, 128, 128, 0.7);
+        }
+
         .message-content {
+            position: relative; /* Make the container a positioned element */
             background-color: #f1f1f1;
             padding: 10px;
             border-radius: 8px;
@@ -575,6 +584,7 @@ socket.on('register_failure', (data) => {
                 <button class="dropdown-button">Extras</button>
                 <div class="dropdown-content">
                     <button id="game-button">Rock-Paper-Scissors</button>
+                    <button id="chess-button">Chess</button>
                     <button id="tictactoe-button">Subway Surfers</button> <!-- New button -->
                     <button id="force-button">Force.io</button> <!-- New button -->
                     <button id="fps-button">my shooty game i made</button> <!-- New button -->
@@ -633,6 +643,34 @@ socket.on('register_failure', (data) => {
                 }
             </style>
         </div>
+        <div id="hint-box" style="display: none; position: absolute; background: #f9f9f9; border: 1px solid #ccc; padding: 10px; border-radius: 5px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); z-index: 1000;">
+            Hold Shift while sending a message to send it anonymously!
+        </div>
+        <script>
+            const hintBox = document.getElementById('hint-box');
+            const sendButton = document.getElementById('send-button');
+
+            // Position the hint box above the send button
+            const positionHintBox = () => {
+                const rect = sendButton.getBoundingClientRect();
+                hintBox.style.left = `${rect.left + window.scrollX}px`;
+                hintBox.style.top = `${rect.top + window.scrollY - hintBox.offsetHeight - 10}px`;
+            };
+
+            // Show the hint box when the page loads
+            window.addEventListener('DOMContentLoaded', () => {
+                positionHintBox();
+                hintBox.style.display = 'block';
+            });
+
+            // Hide the hint box when a message is sent
+            document.getElementById('message-form').addEventListener('submit', () => {
+                hintBox.style.display = 'none';
+            });
+
+            // Reposition the hint box on window resize
+            window.addEventListener('resize', positionHintBox);
+        </script>
         <div id="online-users-bar">
             <h3>Online Users</h3>
             <ul id="online-users-list"></ul>
@@ -700,6 +738,7 @@ socket.on('register_failure', (data) => {
                 }
             </style>
             <button type="submit" id="send-button">Send</button>
+            
         </form>
     </div>
     <div id="gif-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.5); z-index: 1000; justify-content: center; align-items: center;">
@@ -725,8 +764,22 @@ socket.on('register_failure', (data) => {
                     <button id="close-tictactoe" style="margin-top: 10px; padding: 10px 20px; background-color: #444; color: white; border: none; border-radius: 5px; cursor: pointer;">Close</button>
                 </div>
             </div>
+    <div id="whiteboard-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.5); z-index: 1000; justify-content: center; align-items: center;">
+        <canvas id="whiteboard" style="background: white; border: 1px solid #ccc;"></canvas>
+        <button id="close-whiteboard" style="position: absolute; top: 10px; right: 10px;">Close</button>
+    </div>
+    <div id="chess-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.5); z-index: 1000; justify-content: center; align-items: center;">
+        <div style="background: white; padding: 20px; border-radius: 10px; width: 400px; text-align: center; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+            <h2>Chess</h2>
+            <div id="chessboard" style="width: 350px; margin: 0 auto;"></div>
+            <p id="chess-status"></p>
+            <button id="close-chess" style="margin-top: 10px; padding: 10px 20px; background-color: #444; color: white; border: none; border-radius: 5px; cursor: pointer;">Close</button>
+        </div>
+    </div>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
-    <script>
+    <script src="./static/js/chessboard-1.0.0.min.js"></script>
+    <link rel="stylesheet" href="./static/css/chessboard-1.0.0.min.css">    <script>
         const socket = io();
         // Handle GIF button click
         const gifButton = document.getElementById('gif-button');
@@ -795,6 +848,8 @@ socket.on('register_failure', (data) => {
         const logoutButton = document.getElementById('logout-button');
         const settingsButton = document.getElementById('settings-button');
         const rpsButton = document.getElementById('game-button');
+        //const anonymousButton = document.getElementById('anonymous-button');
+
 
 
         let username = '';
@@ -819,7 +874,19 @@ socket.on('register_failure', (data) => {
                 document.getElementById('username-modal').style.display = 'flex'; // Show the login modal
             }
             const savedProfilePic = localStorage.getItem('profilePic');
-
+            const chessButton = document.getElementById('chess-button');
+            if (chessButton) {
+                console.log('Chess button found in the DOM.');
+                chessButton.addEventListener('click', openChessGame);
+                let chessRoom = 'chess_room';
+                let playerColor = null;
+            } else {
+                console.error('chessButton element not found in the DOM.');
+            }
+            const chessboard = Chessboard('chessboard', {
+    position: 'start',
+    pieceTheme: '/static/img/chesspieces/wikipedia/{piece}.png' // Correct path to the images
+});
         });
 
         // Save user details to localStorage on form submission
@@ -1393,6 +1460,12 @@ messagesDiv.addEventListener('click', (e) => {
             alert("Admin Alert: "+alertMessage); // Display the alert message to the user
         });
 
+        console.log("Registering receive_refresh listener");
+        socket.on('test_event', (data) => {
+        console.log("Refresh event received");
+        alert("Admin Force Refresh... refreshing now.")
+        location.reload();
+    });
         /* Load old messages when the page loads
         socket.on('load_messages', (messages) => {
             const mutedUsers = JSON.parse(localStorage.getItem('mutedUsers')) || [];
@@ -1401,14 +1474,32 @@ messagesDiv.addEventListener('click', (e) => {
                 .forEach((message) => appendMessage(message));
         }); */
 
-        // Handle sending a message
+        // Track Shift key state
+let isShiftPressed = false;
+
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Shift') {
+        isShiftPressed = true;
+    }})
+        
+
 messageForm.addEventListener('submit', (e) => {
     e.preventDefault();
     const message = messageInput.value.trim();
     const profilePic = localStorage.getItem('profilePic'); // Get the updated profile picture
 
     if (message) {
-        socket.emit('send_message', { username, profilePic, message });
+        if (isShiftPressed) {
+            // Send message anonymously
+            console.log("Sending anonymous message:", message);
+            socket.emit('anonymous_message', { message });
+            isShiftPressed = false;
+        } else {
+            // Send message normally
+            console.log("Sending message:", message);
+            socket.emit('send_message', { username, profilePic, message });
+            isShiftPressed = false; // Reset Shift key state
+        };
         messageInput.value = ''; // Clear the input field
     }
 });
@@ -1428,7 +1519,7 @@ messageForm.addEventListener('submit', (e) => {
         });
 
         // Append a message to the chat
-            function appendMessage({ id, username: messageUsername, profilePic, message, image, reactions }) {
+            function appendMessage({ id, username: messageUsername, profilePic, message, image, reactions, time }) {
                 const messageElement = document.createElement('div');
                 messageElement.classList.add('message');
                 messageElement.dataset.id = id;
@@ -1443,6 +1534,7 @@ messageForm.addEventListener('submit', (e) => {
                     <img src="${profilePic || 'https://media.tenor.com/fnVo42SgddYAAAAM/dog.gif'}" alt="Profile Picture">
                     <div class="message-content">
                         <strong>${messageUsername}</strong>
+                        <span class="message-time">${time}</span>
                         <p>${message}</p>
                         ${imageTag}
                     <div class="reactions">${Array.isArray(reactions) ? reactions.join(' ') : reactions || ''}</div>
@@ -1451,6 +1543,7 @@ messageForm.addEventListener('submit', (e) => {
                             ${isOwnMessage ? `<button class="edit-button" data-message-id="${id}">Edit</button>` : ''}
                             ${isOwnMessage ? `<button class="delete-button" data-message-id="${id}">Delete</button>` : ''}
                         </div>
+                        
                     </div>
                 `;
 
@@ -1828,10 +1921,16 @@ socket.on('reaction_users', (data) => {
         const tictactoeBoard = document.getElementById('tictactoe-board');
         const tictactoeStatus = document.getElementById('tictactoe-status');
         const closeTicTacToe = document.getElementById('close-tictactoe');
+        const chessButton = document.getElementById('chess-button');
+        const chessModal = document.getElementById('chess-modal');
+        const chessStatus = document.getElementById('chess-status');
+        const closeChess = document.getElementById('close-chess');
+
 
         fpsButton.addEventListener('click', () => {
             window.open('https://814850.xyz/fps', '_blank'); 
         });
+
 
         let tictactoeGame = {
             board: ['', '', '', '', '', '', '', '', ''],
@@ -2224,6 +2323,56 @@ function openPrivateChat(username) {
     privateMessageBox.style.display = 'block';
 }
 
+// Open the chess modal
+function openChessGame() {
+        console.log("Requesting to join chess game...");
+        chessModal.style.display = 'flex';
+        socket.emit('join_chess', { username, room: 'chess_room' });
+    }
+
+    // Close the chess modal
+closeChess.addEventListener('click', () => {
+        console.log("Leaving chess game...");
+        chessModal.style.display = 'none';
+        socket.emit('leave_chess', { username, room: 'chess_room' });
+    });
+
+    // Handle chess move
+chessboard.onDrop = (source, target) => {
+        if (playerColor !== chessboard.orientation()) {
+            alert("It's not your turn!");
+            return 'snapback';
+        }
+
+        const move = { from: source, to: target };
+        socket.emit('chess_move', { room: chessRoom, move });
+    };
+
+    // Listen for chess events
+socket.on('chess_joined', (data) => {
+    console.log("Chess joined:", data);
+    playerColor = data.color;
+    chessboard.orientation(playerColor); // Use setOrientation instead of orientation
+    chessStatus.textContent = `You are playing as ${playerColor}. Waiting for opponent...`;
+});
+
+socket.on('chess_update', (data) => {
+    console.log("Chess update:", data);
+    chessboard.move(`${data.move.from}-${data.move.to}`);
+    chessStatus.textContent = `It's ${data.turn}'s turn.`;
+});
+
+socket.on('chess_player_left', (data) => {
+    console.log("Chess player left:", data);
+    chessStatus.textContent = `${data.username} left the game.`;
+});
+
+socket.on('chess_full', (data) => {
+    console.log("Chess full:", data);
+    alert(data.message);
+});
+
+
 // Handle Tic-Tac-Toe button click
 tictactoeButton.addEventListener('click', () => {
     // Create the Tic-Tac-Toe box
@@ -2322,6 +2471,9 @@ tictactoeButton.addEventListener('click', () => {
         document.addEventListener('mouseup', onMouseUp);
     });
 });
+
+    
+
 
 // Handle force button click
 forceButton.addEventListener('click', () => {
@@ -2616,13 +2768,34 @@ if (tab) {
         badge.textContent = parseInt(badge.textContent) + 1; // Increment unread count
     }
 
-    // Listen for the refresh_page event from the server
-    socket.on('refresh_page', () => {
-        console.log("refresh received")
-        location.reload(); // Reload the page
+
+
+    const whiteboardModal = document.getElementById('whiteboard-modal');
+    const whiteboard = document.getElementById('whiteboard');
+    const closeWhiteboard = document.getElementById('close-whiteboard');
+    const ctx = whiteboard.getContext('2d');
+    let drawing = false;
+
+    whiteboard.width = window.innerWidth * 0.8;
+    whiteboard.height = window.innerHeight * 0.8;
+
+    whiteboard.addEventListener('mousedown', () => drawing = true);
+    whiteboard.addEventListener('mouseup', () => drawing = false);
+    whiteboard.addEventListener('mousemove', (e) => {
+        if (!drawing) return;
+        const x = e.offsetX;
+        const y = e.offsetY;
+        ctx.fillRect(x, y, 2, 2);
+        socket.emit('whiteboard_draw', { x, y });
     });
-        
-        
+
+    socket.on('whiteboard_update', (data) => {
+        ctx.fillRect(data.x, data.y, 2, 2);
+    });
+
+    closeWhiteboard.addEventListener('click', () => whiteboardModal.style.display = 'none');
+
+
     </script>
 </body>
 </html>

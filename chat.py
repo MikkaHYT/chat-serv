@@ -2,6 +2,9 @@ from flask import Flask, render_template, request, jsonify
 from flask_socketio import SocketIO, emit, join_room, leave_room
 import os
 import sqlite3
+from datetime import datetime
+import json
+import threading
 
 app = Flask(__name__)
 app.config['mikka'] = 'your_secret_key'  # Replace with a secure key
@@ -25,7 +28,8 @@ def init_db():
                 profilePic TEXT,
                 message TEXT NOT NULL,
                 image TEXT,
-                reactions TEXT
+                reactions TEXT,
+                time TEXT NOT NULL
             )
         ''')
         cursor.execute('''
@@ -44,11 +48,12 @@ init_db()
 # Save a message to the database
 def save_message_to_db(username, profilePic, message, image):
     with sqlite3.connect(db_file) as conn:
+        current_time = datetime.now().strftime('%H:%M')
         cursor = conn.cursor()
         cursor.execute('''
-            INSERT INTO messages (username, profilePic, message, image, reactions)
-            VALUES (?, ?, ?, ?, ?)
-        ''', (username, profilePic, message, image, ''))
+            INSERT INTO messages (username, profilePic, message, image, reactions, time)
+            VALUES (?, ?, ?, ?, ?, ?)
+        ''', (username, profilePic, message, image, '', current_time))
         conn.commit()
         return cursor.lastrowid
 
@@ -59,7 +64,7 @@ def load_messages_from_db():
         cursor.execute('SELECT * FROM messages ORDER BY id ASC')
         rows = cursor.fetchall()
         return [
-            {'id': row[0], 'username': row[1], 'profilePic': row[2], 'message': row[3], 'image': row[4], 'reactions': row[5]}
+            {'id': row[0], 'username': row[1], 'profilePic': row[2], 'message': row[3], 'image': row[4], 'reactions': row[5], 'time': row[6]}
             for row in rows
         ]
 
@@ -88,6 +93,9 @@ def ss():
 def fps():
     return render_template('fps.html')
 
+@app.route('/whiteboard')
+def whiteboard():
+    return render_template('whiteboard.html')
 
 # Socket.IO events
 #@socketio.on('connect')
@@ -134,7 +142,7 @@ def handle_load_private_messages(data):
                 cursor.execute('SELECT * FROM messages WHERE room = ? ORDER BY id ASC', (room,))
                 rows = cursor.fetchall()
                 messages = [
-                    {'id': row[0], 'username': row[1], 'profilePic': row[2], 'message': row[3], 'image': row[4], 'reactions': row[5]}
+                    {'id': row[0], 'username': row[1], 'profilePic': row[2], 'message': row[3], 'image': row[4], 'reactions': row[5], time: row[6]}
                     for row in rows
                 ]
             emit('load_private_messages', messages, room=room)
@@ -172,7 +180,8 @@ def handle_send_message(data):
         'profilePic': profilePic,
         'message': message,
         'image': image,
-        'reactions': ''
+        'reactions': '',
+        'time': datetime.now().strftime('%H:%M')
     }, broadcast=True)
 
 @socketio.on('connect')
@@ -254,6 +263,7 @@ def handle_get_user_data(data):
 def handle_refresh_clients():
     # Broadcast the refresh event to all connected clients
     print("refreshing clients..")
+    emit('test_event', {'message': 'Test event triggered'}, broadcast=True)
     emit('refresh_page', broadcast=True)
 
 @socketio.on('update_user_data')
@@ -294,6 +304,62 @@ def handle_add_reaction(data):
     'reactions': reactions.strip()
 })
     print(f"Reactions updated for message ID {message_id}: {reactions.strip()}")
+
+# In-memory storage for chess games
+chess_games = {}
+
+@socketio.on('join_chess')
+def handle_join_chess(data):
+    username = data.get('username')
+    room = data.get('room', 'chess_room')  # Default room for chess
+    print(f"{username} has joined the chess game in room {room}")
+    join_room(room)
+
+    if room not in chess_games:
+        chess_games[room] = {
+            'players': [],
+            'moves': [],
+            'turn': 'white',  # White moves first
+        }
+
+    # Check if the player is already in the game
+    if username in chess_games[room]['players']:
+        emit('chess_joined', {'username': username, 'color': 'white' if chess_games[room]['players'][0] == username else 'black'}, room=room)
+        return
+
+    # Add the player if there's room
+    if len(chess_games[room]['players']) < 2:
+        chess_games[room]['players'].append(username)
+        color = 'white' if len(chess_games[room]['players']) == 1 else 'black'
+        emit('chess_joined', {'username': username, 'color': color}, room=room)
+
+        # Start the game if two players have joined
+        if len(chess_games[room]['players']) == 2:
+            emit('chess_start', {'players': chess_games[room]['players'], 'turn': chess_games[room]['turn']}, room=room)
+    else:
+        emit('chess_full', {'message': 'The game is full. Please wait for the next round.'}, to=request.sid)
+@socketio.on('chess_move')
+def handle_chess_move(data):
+    room = data.get('room', 'chess_room')
+    move = data.get('move')  # Example: {'from': 'e2', 'to': 'e4'}
+
+    if room in chess_games:
+        chess_games[room]['moves'].append(move)
+        chess_games[room]['turn'] = 'black' if chess_games[room]['turn'] == 'white' else 'white'
+        emit('chess_update', {'move': move, 'turn': chess_games[room]['turn']}, room=room)
+
+@socketio.on('leave_chess')
+def handle_leave_chess(data):
+    username = data.get('username')
+    room = data.get('room', 'chess_room')
+    print(f"{username} has left the chess game in room {room}")
+    if room in chess_games and username in chess_games[room]['players']:
+        chess_games[room]['players'].remove(username)
+        emit('chess_player_left', {'username': username}, room=room)
+
+        # Reset the game if all players leave
+        if not chess_games[room]['players']:
+            del chess_games[room]
 
 # In-memory database for private messages
 private_messages = {}
@@ -370,12 +436,21 @@ def handle_rps_choice(data):
                 rps_game['players'] = []
                 rps_game['choices'] = {}
 
-                # Broadcast the result as a message to all clients
-                socketio.emit('send_message', jsonify({
-                    'username': 'SERVER',
-                    'profilePic': '',
-                    'message': 'The current Rock Paper Scissors game is over. You can join the next round.',
-                }))
+                # Notify all players that the game is over
+                message = 'The current Rock Paper Scissors game is over. You may join the next round.'
+                username = 'Server'
+                profilePic = ''
+                image = ''
+                # Save the message to the database
+                save_message_to_db(username, profilePic, message, image)
+                if message:
+                    emit('receive_message', {
+                        'username': 'Server',
+                        'profilePic': '',
+                        'message': message,
+                        'image': '',
+                        'reactions': ''
+                    }, broadcast=True)
 
 @socketio.on('broadcast_message')
 def handle_broadcast_message(data):
@@ -447,6 +522,11 @@ def handle_admin_broadcast(data):
         # Emit the broadcast alert to all connected clients
         emit('receive_alert', {'alert': alert_message}, broadcast=True)
 
+@socketio.on('admin_refresh')
+def handle_admin_broadcast(data):
+        print("Admin refresh initiated")
+        emit('receive_refresh', broadcast=True)
+
 @socketio.on('admin_erase_chat')
 def handle_admin_erase_chat():
     with sqlite3.connect(db_file) as conn:
@@ -515,6 +595,113 @@ def check_tictactoe_winner():
         if tictactoe_game['board'][a] == tictactoe_game['board'][b] == tictactoe_game['board'][c] and tictactoe_game['board'][a] != '':
             return tictactoe_game['board'][a]
     return None
+
+# File to store whiteboard data
+WHITEBOARD_FILE = 'static/uploads/whiteboard.json'
+file_lock = threading.Lock()
+
+@socketio.on('whiteboard_draw')
+def handle_whiteboard_draw(data):
+    # Broadcast drawing data to all clients
+    emit('whiteboard_update', data, broadcast=True)
+
+    # Save the drawing data to the file
+    with file_lock:  # Ensure thread-safe access
+        try:
+            with open(WHITEBOARD_FILE, 'r') as f:
+                try:
+                    whiteboard_data = json.load(f)
+                except json.JSONDecodeError:
+                    whiteboard_data = []  # Initialize as empty if the file is empty
+        except FileNotFoundError:
+            whiteboard_data = []  # Initialize as empty if the file does not exist
+
+        whiteboard_data.append(data)
+
+        # Write to a temporary file first, then rename it
+        temp_file = WHITEBOARD_FILE + '.tmp'
+        with open(temp_file, 'w') as f:
+            json.dump(whiteboard_data, f, indent=4)
+        os.replace(temp_file, WHITEBOARD_FILE)
+
+@socketio.on('save_whiteboard')
+def handle_save_whiteboard():
+    # This event is triggered to ensure the whiteboard is saved
+    emit('whiteboard_saved', {'message': 'Whiteboard saved successfully'}, broadcast=True)
+
+@socketio.on('load_whiteboard')
+def handle_load_whiteboard():
+    with file_lock:  # Ensure thread-safe access
+        try:
+            with open(WHITEBOARD_FILE, 'r') as f:
+                whiteboard_data = json.load(f)
+            emit('whiteboard_data', whiteboard_data, broadcast=False)
+        except (FileNotFoundError, json.JSONDecodeError):
+            # Handle missing or invalid file
+            emit('whiteboard_data', [], broadcast=False)
+
+# Track active cursors
+active_cursors = {}
+
+@socketio.on('cursor_position')
+def handle_cursor_position(data):
+        user_id = data.get('id')
+        position = data.get('position')
+        if user_id and position:
+            active_cursors[user_id] = position
+            emit('cursor_update', {'id': user_id, 'position': position}, broadcast=True)
+
+@socketio.on('disconnect')
+def handle_disconnect():
+        user_id = request.sid  # Use the session ID as the unique user ID
+        if user_id in active_cursors:
+            del active_cursors[user_id]
+            emit('cursor_disconnect', {'id': user_id}, broadcast=True)
+
+@socketio.on('whiteboard_mouseup')
+def handle_whiteboard_mouseup(data):
+    # Save the whiteboard data automatically on mouseup
+    with file_lock:  # Ensure thread-safe access
+        try:
+            with open(WHITEBOARD_FILE, 'r') as f:
+                try:
+                    whiteboard_data = json.load(f)
+                except json.JSONDecodeError:
+                    whiteboard_data = []  # Initialize as empty if the file is empty
+        except FileNotFoundError:
+            whiteboard_data = []  # Initialize as empty if the file does not exist
+
+        whiteboard_data.append(data)
+
+        # Write to a temporary file first, then rename it
+        temp_file = WHITEBOARD_FILE + '.tmp'
+        with open(temp_file, 'w') as f:
+            json.dump(whiteboard_data, f, indent=4)
+        os.replace(temp_file, WHITEBOARD_FILE)
+
+    emit('whiteboard_saved', {'message': 'Whiteboard saved successfully'}, broadcast=True)
+    
+@socketio.on('anonymous_message')
+def handle_anonymous_message(data):
+    message = data.get('message')
+    username = 'Anonymous'
+    profilePic = ''
+    image = ''
+    # Save the message to the database
+    save_message_to_db(username, profilePic, message, image)
+    if message:
+        emit('receive_message', {
+            'username': 'Anonymous',
+            'profilePic': '',
+            'message': message,
+            'image': '',
+            'reactions': ''
+        }, broadcast=True)
+
+@socketio.on('chess_move')
+def handle_chess_move(data):
+    # Broadcast the move to the opponent
+    emit('chess_update', data, room=data.get('room'))
 
 if __name__ == '__main__':
     socketio.run(app, debug=True)

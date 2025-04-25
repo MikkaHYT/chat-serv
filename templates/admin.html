@@ -24,6 +24,8 @@
         .refresh-button:hover { background-color: #218838; }
         .erase-button { background-color: #f73838; color: white; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; }
         .erase-button:hover { background-color: #9e0101; }
+        #refresh-clients-button { background-color: #28a745; color: white; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; }
+        #refresh-clients-button:hover { background-color: #218838; }
     </style>
 </head>
 <body>
@@ -32,9 +34,8 @@
     </header>
     <main>
         <button class="refresh-button" id="refresh-messages">Refresh Messages</button>
+        <button id="refresh-clients-button" >Refresh All Clients</button>
         <button class="erase-button" id="erase-chat">Erase Chat</button>
-        <!-- Add this button in the admin panel -->
-        <button id="refresh-clients-button" style="padding: 10px 20px; background-color: #ff4d4d; color: white; border: none; border-radius: 5px; cursor: pointer;">Refresh All Clients</button>
 
         <script>
             const refreshClientsButton = document.getElementById('refresh-clients-button');
