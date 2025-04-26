@@ -338,12 +338,28 @@
         body.dark-mode #rps-box button:hover {
             background-color: #555;
         }
+
+        #load-more-button {
+            display: none; /* Hidden by default */
+            margin: 10px auto;
+            padding: 10px 20px;
+            background-color: #007BFF;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        #load-more-button:hover {
+            background-color: #0056b3;
+        }
     </style>
 </head>
 <body>
     <div id="username-modal">
         <form id="username-form">
-            <h2>Login or Register</h2>
+            <!-- <h2>Login or Register</h2> -->
             <div id="form-tabs" style="display: flex; justify-content: center; margin-bottom: 20px;">
                 <button type="button" id="login-tab" style="padding: 10px 20px; border: none; cursor: pointer; background-color: #007BFF; color: white; border-radius: 5px; margin-right: 10px;">Login</button>
                 <button type="button" id="register-tab" style="padding: 10px 20px; border: none; cursor: pointer; background-color: #f1f1f1; color: #333; border-radius: 5px;">Register</button>
@@ -401,7 +417,7 @@ document.querySelector('#login-form button[type="submit"]').addEventListener('cl
         socket.emit('login', { username, password });
 
         // Store the username in localStorage
-        localStorage.setItem('username', username);
+        //localStorage.setItem('username', username);
     } else {
         alert('Please fill in both fields.');
     }
@@ -422,22 +438,13 @@ document.querySelector('#register-form button[type="submit"]').addEventListener(
     socket.emit('register', { username, password });
 
     // Optionally store the username in localStorage
-    localStorage.setItem('username', username);
+    //localStorage.setItem('username', username);
     alert('Registration successful! Please log in.');
 });
 
-// Listen for login success from the server
-socket.on('login_success', (data) => {
-    alert(data.message);
-    const username = data.username; // Get the username from the server response
-    localStorage.setItem('username', username); // Store it in localStorage
-    joinChat(username); // Call the function to join the chat
-});
 
-// Listen for login failure
-socket.on('login_failure', (data) => {
-    alert(data.message);
-});
+
+
 // Handle register form submission
 document.querySelector('#register-form button[type="submit"]').addEventListener('click', (e) => {
     e.preventDefault();
@@ -455,15 +462,6 @@ document.querySelector('#register-form button[type="submit"]').addEventListener(
     }
 });
 
-
-socket.on('login_success', (data) => {
-    alert(data.message);
-    username = data.username; // Store the username from the server response
-    console.log(username); // Check if this logs the expected value
-    localStorage.setItem('username', username); // Optionally store it in localStorage
-    joinChat(username); // Call the function to join the chat
-});
-
 function joinChat(username) {
     document.getElementById('username-modal').style.display = 'none'; // Hide the login modal
     document.getElementById('chat-container').style.display = 'flex'; // Show the chat container
@@ -472,23 +470,6 @@ function joinChat(username) {
     socket.emit('join', { username }); // Notify the server that the user has joined
 }
 
-
-socket.on('login_failure', (data) => {
-    alert(data.message);
-});
-
-// Listen for register success or failure
-socket.on('register_success', (data) => {
-    alert(data.message);
-    username = data.username;
-    console.log(username); // Check if this logs the expected value
-    localStorage.setItem('username', username); // Optionally store it in localStorage
-    joinChat(username);
-});
-
-socket.on('register_failure', (data) => {
-    alert(data.message);
-});
     </script>
     <style>
         #username-modal {
@@ -539,6 +520,40 @@ socket.on('register_failure', (data) => {
             border-color: #007BFF;
         }
 
+        #login-password {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 15px;
+            border: 1px solid #444;
+            border-radius: 5px;
+            font-size: 16px;
+            background-color: #1e1e1e;
+            color: #ffffff;
+            outline: none;
+            transition: border-color 0.3s ease;
+        }
+
+        #login-password {
+            border-color: #007BFF;
+        }
+
+        #register-password {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 15px;
+            border: 1px solid #444;
+            border-radius: 5px;
+            font-size: 16px;
+            background-color: #1e1e1e;
+            color: #ffffff;
+            outline: none;
+            transition: border-color 0.3s ease;
+        }
+
+        #register-password {
+            border-color: #007BFF;
+        }
+
         #username-form button {
             background-color: #007BFF;
             color: white;
@@ -583,11 +598,11 @@ socket.on('register_failure', (data) => {
             <div class="dropdown">
                 <button class="dropdown-button">Extras</button>
                 <div class="dropdown-content">
-                    <button id="game-button">Rock-Paper-Scissors</button>
-                    <button id="chess-button">Chess</button>
-                    <button id="tictactoe-button">Subway Surfers</button> <!-- New button -->
+                    <button id="whiteboard-button">Whiteboard</button> <!-- New button -->
+                    <button id="fps-button">my shooty game</button> <!-- New button -->
                     <button id="force-button">Force.io</button> <!-- New button -->
-                    <button id="fps-button">my shooty game i made</button> <!-- New button -->
+                    <button id="tictactoe-button">Subway Surf</button> <!-- New button -->
+                    <button id="game-button">Rock-Paper-Scissors</button>
                     <button id="superhot-button" onclick="window.location.href='/sh'">SUPERHOT</button>
             <!--    <button id="placeholder-option-2">Placeholder Option 2</button>
                     <button id="placeholder-option-3">Placeholder Option 3</button> -->
@@ -663,10 +678,7 @@ socket.on('register_failure', (data) => {
                 hintBox.style.display = 'block';
             });
 
-            // Hide the hint box when a message is sent
-            document.getElementById('message-form').addEventListener('submit', () => {
-                hintBox.style.display = 'none';
-            });
+
 
             // Reposition the hint box on window resize
             window.addEventListener('resize', positionHintBox);
@@ -715,7 +727,8 @@ socket.on('register_failure', (data) => {
             --pm-button-color: #e0e0e0;
             }
         </style>
-        <div id="messages"></div>
+        <div id="messages">    <button id="load-more-button" style="display: none; margin: 10px auto; padding: 10px 20px; background-color: #007BFF; color: white; border: none; border-radius: 5px; cursor: pointer;">Load More</button>
+        </div>
         <form id="message-form">
             <button id="gif-button" type="button" style="margin-right: 10px; padding: 10px; background-color: var(--gif-button-bg, #007BFF); color: white; border: none; border-radius: 5px; cursor: pointer; font-weight: bold;">GIF</button>
             <style>
@@ -808,11 +821,11 @@ socket.on('register_failure', (data) => {
             if (query) {
             let response;
             try {
-                response = await fetch(`https://api.giphy.com/v1/gifs/search?api_key=SzAhImfXJkuLaI0OXFUR7B0hrFo3LLBT&q=${query}&limit=15`);
+                response = await fetch(`https://api.giphy.com/v1/gifs/search?api_key=SzAhImfXJkuLaI0OXFUR7B0hrFo3LLBT&q=${query}&limit=10`);
                 if (!response.ok) throw new Error('Primary API key failed');
             } catch (error) {
                 console.warn('Primary API key failed, switching to backup key:', error);
-                response = await fetch(`https://api.giphy.com/v1/gifs/search?api_key=QruKaq2SEEOJVf82Pw5Cj4zDANDdYGDW&q=${query}&limit=15`);
+                response = await fetch(`https://api.giphy.com/v1/gifs/search?api_key=QruKaq2SEEOJVf82Pw5Cj4zDANDdYGDW&q=${query}&limit=10`);
             }
             const data = await response.json();
             gifResults.innerHTML = '';
@@ -938,7 +951,8 @@ socket.on('register_failure', (data) => {
 
         logoutButton.addEventListener('click', () => {
             socket.emit('leave', { username });
-            //location.reload(); // Reload the page to reset the chat
+            localStorage.removeItem('username'); // Clear the username from localStorage
+            location.reload(); // Reload the page to reset the chat
         });
 
         // Add muted users modal
@@ -959,6 +973,8 @@ socket.on('register_failure', (data) => {
                 <ul id="muted-users-list" style="list-style: none; padding: 0; margin: 0;"></ul>
             `;
         document.body.appendChild(mutedUsersModal);
+
+        
 
         // Handle profile picture click
     messagesDiv.addEventListener('click', (e) => {
@@ -1228,6 +1244,21 @@ socket.on('register_failure', (data) => {
             
         }
 
+        
+
+        // Listen for register success or failure
+        socket.on('register_success', (data) => {
+            alert(data.message);
+            username = data.username;
+            console.log(username); // Check if this logs the expected value
+            //localStorage.setItem('username', username); // Optionally store it in localStorage
+            joinChat(username);
+        });
+
+        socket.on('register_failure', (data) => {
+            alert(data.message);
+        });
+
         // Temporary storage for muted users' messages
         const mutedMessages = (() => {
             try {
@@ -1482,6 +1513,16 @@ document.addEventListener('keydown', (e) => {
         isShiftPressed = true;
     }})
         
+document.addEventListener('keyup', (e) => {
+    if (e.key === 'Shift') {
+        isShiftPressed = false;
+    }
+});
+
+// Hide the hint box when a message is sent
+messageForm.addEventListener('submit', () => {
+    hintBox.style.display = 'none';
+});
 
 messageForm.addEventListener('submit', (e) => {
     e.preventDefault();
@@ -1509,47 +1550,72 @@ messageForm.addEventListener('submit', (e) => {
         socket.on('login_success', (username) => {
             console.log("loading messages on login")
             console.log(username)
-            
+            localStorage.setItem('username', username); // Optionally store it in localStorage
             socket.emit('join', { username }); // Notify the server that the user has joined
             location.reload()
             joinChat(username); // Automatically rejoin the chat
-            socket.emit('load_messages', {}, (messages) => {
-                messages.forEach(message => appendMessage(message));
-            });
+            console.log('Connected to the server');
+            socket.emit('load_messages'); // Load the most recent 20 messages
         });
 
+        socket.on('load_more_messages', (messages) => {
+        const reversedMessages = messages.reverse(); // Reverse to display in chronological order
+        reversedMessages.forEach((message) => {
+            appendMessage(message); // Append the messages to the bottom
+        });
+
+        // Scroll to the bottom of the chat on the initial load
+        if (!document.body.dataset.initialLoadComplete) {
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+            document.body.dataset.initialLoadComplete = true; // Mark the initial load as complete
+        }
+    });
+
+        // If this is the first load, scroll to the bottom of the chat
+        if (messages.length > 0 && !document.body.dataset.initialLoadComplete) {
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+            document.body.dataset.initialLoadComplete = true; // Mark the initial load as complete
+        };
+
+
+
+
+
         // Append a message to the chat
-            function appendMessage({ id, username: messageUsername, profilePic, message, image, reactions, time }) {
-                const messageElement = document.createElement('div');
-                messageElement.classList.add('message');
-                messageElement.dataset.id = id;
+        function appendMessage({ id, username: messageUsername, profilePic, message, image, reactions, time }, prepend = false) {
+            // Check if the message already exists in the DOM
+            if (messagesDiv.querySelector(`.message[data-id="${id}"]`)) {
+                console.log(`Message with ID ${id} already exists. Skipping.`);
+                return; // Skip duplicate messages
+            }
 
-                const imageTag = image
-                    ? `<img src="${image}" alt="Uploaded Image" style="width: 400px; height: auto; margin-top: 10px; border-radius: 0; border: none;">`
-                    : '';
+            const messageElement = document.createElement('div');
+            messageElement.classList.add('message');
+            messageElement.dataset.id = id;
 
-                const isOwnMessage = messageUsername === username;
+            const imageTag = image
+                ? `<img src="${image}" alt="Uploaded Image" style="width: 400px; height: auto; margin-top: 10px; border-radius: 0; border: none;">`
+                : '';
 
-                messageElement.innerHTML = `
-                    <img src="${profilePic || 'https://media.tenor.com/fnVo42SgddYAAAAM/dog.gif'}" alt="Profile Picture">
-                    <div class="message-content">
-                        <strong>${messageUsername}</strong>
-                        <span class="message-time">${time}</span>
-                        <p>${message}</p>
-                        ${imageTag}
-                    <div class="reactions">${Array.isArray(reactions) ? reactions.join(' ') : reactions || ''}</div>
-                        <div class="message-actions">
-                            <button class="react-button" data-message-id="${id}">React</button>
-                            ${isOwnMessage ? `<button class="edit-button" data-message-id="${id}">Edit</button>` : ''}
-                            ${isOwnMessage ? `<button class="delete-button" data-message-id="${id}">Delete</button>` : ''}
-                        </div>
-                        
+            const isOwnMessage = messageUsername === username;
+
+            messageElement.innerHTML = `
+                <img src="${profilePic || 'https://media.tenor.com/fnVo42SgddYAAAAM/dog.gif'}" alt="Profile Picture">
+                <div class="message-content">
+                    <strong>${messageUsername}</strong>
+                    <span class="message-time">${time}</span>
+                    <p>${message}</p>
+                    ${imageTag}
+                <div class="reactions">${Array.isArray(reactions) ? reactions.join(' ') : reactions || ''}</div>
+                    <div class="message-actions">
+                        <button class="react-button" data-message-id="${id}">React</button>
+                        ${isOwnMessage ? `<button class="edit-button" data-message-id="${id}">Edit</button>` : ''}
+                        ${isOwnMessage ? `<button class="delete-button" data-message-id="${id}">Delete</button>` : ''}
                     </div>
-                `;
-
-                messagesDiv.appendChild(messageElement);
-                messagesDiv.scrollTop = messagesDiv.scrollHeight;
-            
+                </div>
+            `;
+            messagesDiv.appendChild(messageElement); // Append newer messages
+        
             // Highlight the message if it contains a tag for the current user
             if (message.includes(`@${username}`)) {
                 const messageElement = messagesDiv.querySelector(`.message[data-id="${id}"]`);
@@ -1917,6 +1983,7 @@ socket.on('reaction_users', (data) => {
         const tictactoeButton = document.getElementById('tictactoe-button');
         const forceButton = document.getElementById('force-button');
         const fpsButton = document.getElementById('fps-button');
+        const whiteboardButton = document.getElementById('whiteboard-button');
         const tictactoeModal = document.getElementById('tictactoe-modal');
         const tictactoeBoard = document.getElementById('tictactoe-board');
         const tictactoeStatus = document.getElementById('tictactoe-status');
@@ -1931,6 +1998,10 @@ socket.on('reaction_users', (data) => {
             window.open('https://814850.xyz/fps', '_blank'); 
         });
 
+        /* whiteboardButton.addEventListener('click', () => {
+            window.open('/whiteboard', '_blank'); 
+        });
+        */
 
         let tictactoeGame = {
             board: ['', '', '', '', '', '', '', '', ''],
@@ -2467,6 +2538,123 @@ tictactoeButton.addEventListener('click', () => {
         offsetX = e.clientX - tictactoeBox.offsetLeft;
         offsetY = e.clientY - tictactoeBox.offsetTop;
         tictactoeBox.style.transition = 'none'; // Disable transition during drag
+        document.addEventListener('mousemove', onMouseMove);
+        document.addEventListener('mouseup', onMouseUp);
+    });
+});
+
+// Handle Tic-Tac-Toe button click
+whiteboardButton.addEventListener('click', () => {
+    // Create the Tic-Tac-Toe box
+    const whiteboardBox = document.createElement('div');
+    whiteboardBox.id = 'whiteboard-box';
+    whiteboardBox.style.position = 'absolute';
+    whiteboardBox.style.top = '100px';
+    whiteboardBox.style.left = '100px';
+    whiteboardBox.style.width = '1200px';
+    whiteboardBox.style.height = '800px';
+    whiteboardBox.style.background = '#fff';
+    whiteboardBox.style.border = '1px solid #ccc';
+    whiteboardBox.style.borderRadius = '5px';
+    whiteboardBox.style.boxShadow = '0 4px 6px rgba(0, 0, 0, 0.1)';
+    whiteboardBox.style.zIndex = '1000';
+    whiteboardBox.style.resize = 'both';
+    whiteboardBox.style.overflow = 'hidden';
+
+    // Add the close button
+    const closeButton = document.createElement('button');
+    closeButton.textContent = 'X';
+    closeButton.style.position = 'absolute';
+    closeButton.style.top = '5px';
+    closeButton.style.right = '5px';
+    closeButton.style.background = '#ff4d4d';
+    closeButton.style.color = '#fff';
+    closeButton.style.border = 'none';
+    closeButton.style.borderRadius = '50%';
+    closeButton.style.width = '25px';
+    closeButton.style.height = '25px';
+    closeButton.style.cursor = 'pointer';
+    closeButton.style.fontWeight = 'bold';
+    closeButton.addEventListener('click', () => {
+        document.body.removeChild(whiteboardBox);
+    });
+
+    // Add the close button
+    const moveButton = document.createElement('button');
+    moveButton.textContent = '+';
+    moveButton.style.position = 'absolute';
+    moveButton.style.top = '5px';
+    moveButton.style.left = '5px';
+    moveButton.style.background = '#008000';
+    moveButton.style.color = '#fff';
+    moveButton.style.border = 'none';
+    moveButton.style.borderRadius = '50%';
+    moveButton.style.width = '25px';
+    moveButton.style.height = '25px';
+    moveButton.style.cursor = 'pointer';
+    moveButton.style.fontWeight = 'bold';
+
+
+    // Add the iframe
+    const iframe = document.createElement('iframe');
+    iframe.src = '/whiteboard'; // Replace with the actual URL for your Tic-Tac-Toe game
+    iframe.style.width = '100%';
+    iframe.style.height = '100%';
+    iframe.style.border = 'none';
+    // Attempt to mute the iframe
+    iframe.addEventListener('load', () => {
+        try {
+            const iframeDocument = iframe.contentDocument || iframe.contentWindow.document;
+            const mediaElements = iframeDocument.querySelectorAll('audio, video');
+            mediaElements.forEach((media) => {
+                media.muted = true;
+            });
+        } catch (error) {
+            console.error('Unable to mute iframe content:', error);
+        }
+    });
+
+    // Append elements to the Tic-Tac-Toe box
+    whiteboardBox.appendChild(closeButton);
+    whiteboardBox.appendChild(moveButton);
+    whiteboardBox.appendChild(iframe);
+
+    // Append the Tic-Tac-Toe box to the body
+    document.body.appendChild(whiteboardBox);
+
+    // Make the Tic-Tac-Toe box draggable
+    let isDragging = false;
+    let offsetX, offsetY;
+
+    whiteboardBox.addEventListener('mousedown', (e) => {
+        if (e.target === closeButton) return; // Prevent dragging when clicking the close button
+        isDragging = true;
+        offsetX = e.clientX - whiteboardBox.offsetLeft;
+        offsetY = e.clientY - whiteboardBox.offsetTop;
+        whiteboardBox.style.transition = 'none'; // Disable transition during drag
+    });
+
+    const onMouseMove = (e) => {
+        if (isDragging) {
+            whiteboardBox.style.left = `${e.clientX - offsetX}px`;
+            whiteboardBox.style.top = `${e.clientY - offsetY}px`;
+        }
+    };
+
+    const onMouseUp = () => {
+        isDragging = false;
+        whiteboardBox.style.transition = ''; // Re-enable transition after drag
+        document.removeEventListener('mousemove', onMouseMove);
+        document.removeEventListener('mouseup', onMouseUp);
+    };
+
+    whiteboardBox.addEventListener('mousedown', (e) => {
+        if (e.target === closeButton) return; // Prevent dragging when clicking the close button
+        if (e.target === closeButton || e.target === whiteboardBox.querySelector('iframe')) return; // Prevent dragging when clicking the close button or resizing
+        isDragging = true;
+        offsetX = e.clientX - whiteboardBox.offsetLeft;
+        offsetY = e.clientY - whiteboardBox.offsetTop;
+        whiteboardBox.style.transition = 'none'; // Disable transition during drag
         document.addEventListener('mousemove', onMouseMove);
         document.addEventListener('mouseup', onMouseUp);
     });
