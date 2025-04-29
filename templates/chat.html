@@ -1284,6 +1284,8 @@ function joinChat(username) {
                         appendMessage(message);
                     }
                 });
+                // Scroll to the bottom of the chat
+                messagesDiv.scrollTop = messagesDiv.scrollHeight;
             });
             window.loadMessagesListenerRegistered = true; // Mark the listener as registered
         }
@@ -1583,56 +1585,47 @@ messageForm.addEventListener('submit', (e) => {
 
         // Append a message to the chat
         function appendMessage({ id, username: messageUsername, profilePic, message, image, reactions, time }, prepend = false) {
-            // Check if the message already exists in the DOM
-            messagesDiv.scrollTop = messagesDiv.scrollHeight;
-            if (messagesDiv.querySelector(`.message[data-id="${id}"]`)) {
-                console.log(`Message with ID ${id} already exists. Skipping.`);
-                return; // Skip duplicate messages
-            }
+    // Check if the message already exists in the DOM
+    if (messagesDiv.querySelector(`.message[data-id="${id}"]`)) {
+        console.log(`Message with ID ${id} already exists. Skipping.`);
+        return; // Skip duplicate messages
+    }
 
-            const messageElement = document.createElement('div');
-            messageElement.classList.add('message');
-            messageElement.dataset.id = id;
+    const messageElement = document.createElement('div');
+    messageElement.classList.add('message');
+    messageElement.dataset.id = id;
 
-            const imageTag = image
-                ? `<img src="${image}" alt="Uploaded Image" style="width: 400px; height: auto; margin-top: 10px; border-radius: 0; border: none;">`
-                : '';
+    const imageTag = image
+        ? `<img src="${image}" alt="Uploaded Image" style="width: 400px; height: auto; margin-top: 10px; border-radius: 0; border: none;">`
+        : '';
 
-            const isOwnMessage = messageUsername === username;
+    const isOwnMessage = messageUsername === username;
 
-            messageElement.innerHTML = `
-                <img src="${profilePic || 'https://media.tenor.com/fnVo42SgddYAAAAM/dog.gif'}" alt="Profile Picture">
-                <div class="message-content">
-                    <strong>${messageUsername}</strong>
-                    <span class="message-time">${time}</span>
-                    <p>${message}</p>
-                    ${imageTag}
-                <div class="reactions">${Array.isArray(reactions) ? reactions.join(' ') : reactions || ''}</div>
-                    <div class="message-actions">
-                        <button class="react-button" data-message-id="${id}">React</button>
-                        ${isOwnMessage ? `<button class="edit-button" data-message-id="${id}">Edit</button>` : ''}
-                        ${isOwnMessage ? `<button class="delete-button" data-message-id="${id}">Delete</button>` : ''}
-                    </div>
-                </div>
-            `;
-            messagesDiv.appendChild(messageElement); // Append newer messages
-        
-            // Highlight the message if it contains a tag for the current user
-            if (message.includes(`@${username}`)) {
-                const messageElement = messagesDiv.querySelector(`.message[data-id="${id}"]`);
-                if (messageElement) {
-                    const messageBox = messageElement.querySelector('.message-content');
-                    if (messageBox) {
-                        messageBox.style.boxShadow = '0 0 10px 2px #ffeb3b'; // Add a glowing yellow highlight
-                        messageBox.style.transition = 'box-shadow 0.3s ease-in-out'; // Smooth transition
-                    }
-                    setTimeout(() => {
-                        messageBox.style.transition = 'box-shadow 0.4s ease-in-out'; // Smooth transition
-                        messageBox.style.boxShadow = ''; // Remove highlight after 6 seconds
-                    }, 6000);
-                }
-            }
-        }
+    messageElement.innerHTML = `
+        <img src="${profilePic || 'https://media.tenor.com/fnVo42SgddYAAAAM/dog.gif'}" alt="Profile Picture">
+        <div class="message-content">
+            <strong>${messageUsername}</strong>
+            <span class="message-time">${time}</span>
+            <p>${message}</p>
+            ${imageTag}
+            <div class="reactions">${Array.isArray(reactions) ? reactions.join(' ') : reactions || ''}</div>
+            <div class="message-actions">
+                <button class="react-button" data-message-id="${id}">React</button>
+                ${isOwnMessage ? `<button class="edit-button" data-message-id="${id}">Edit</button>` : ''}
+                ${isOwnMessage ? `<button class="delete-button" data-message-id="${id}">Delete</button>` : ''}
+            </div>
+        </div>
+    `;
+
+    if (prepend) {
+        messagesDiv.prepend(messageElement); // Prepend older messages
+    } else {
+        messagesDiv.appendChild(messageElement); // Append newer messages
+    }
+
+    // Scroll to the bottom of the messages div
+    messagesDiv.scrollTop = messagesDiv.scrollHeight;
+}
 
        // Handle reaction button click
         messagesDiv.addEventListener('click', (e) => {
