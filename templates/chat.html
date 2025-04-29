@@ -1584,6 +1584,7 @@ messageForm.addEventListener('submit', (e) => {
         // Append a message to the chat
         function appendMessage({ id, username: messageUsername, profilePic, message, image, reactions, time }, prepend = false) {
             // Check if the message already exists in the DOM
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
             if (messagesDiv.querySelector(`.message[data-id="${id}"]`)) {
                 console.log(`Message with ID ${id} already exists. Skipping.`);
                 return; // Skip duplicate messages
