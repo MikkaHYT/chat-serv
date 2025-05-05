@@ -354,48 +354,6 @@
         #load-more-button:hover {
             background-color: #0056b3;
         }
-
-        #hint-box {
-            position: absolute;
-            background: #f9f9f9;
-            border: 1px solid #ccc;
-            padding: 10px;
-            border-radius: 5px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-            z-index: 0;
-            font-size: 14px;
-            color: #333;
-            text-align: center;
-            width: 100px;
-            top: 775px; /* Position it above the submit button */
-            right: 0px;
-        }
-
-
-    #loading-indicator h2 {
-        font-size: 24px;
-        margin-bottom: 20px;
-    }
-
-    #loading-indicator::after {
-        content: '';
-        width: 40px;
-        height: 40px;
-        border: 4px solid white;
-        border-top: 4px solid transparent;
-        border-radius: 50%;
-        animation: spin 1s linear infinite;
-    }
-
-    @keyframes spin {
-        from {
-            transform: rotate(0deg);
-        }
-        to {
-            transform: rotate(360deg);
-        }
-    }
-
     </style>
 </head>
 <body>
@@ -633,14 +591,13 @@ function joinChat(username) {
     </style>
 
     <div id="chat-container">
-        <div id="typing-indicator" style="display: none; color: gray; font-style: italic; margin-top: 5px;"></div>
+
         <div id="top-buttons">
             <button id="logout-button">Logout</button>
             <button id="settings-button">Settings</button>
             <div class="dropdown">
                 <button class="dropdown-button">Extras</button>
                 <div class="dropdown-content">
-                    <button id="pictionary-button">Pictionary (W.I.P)</button> <!-- New button -->
                     <button id="whiteboard-button">Whiteboard</button> <!-- New button -->
                     <button id="fps-button">my shooty game</button> <!-- New button -->
                     <button id="force-button">Force.io</button> <!-- New button -->
@@ -676,6 +633,7 @@ function joinChat(username) {
                     display: none;
                     position: absolute;
                     background-color: #f9f9f900;
+                    min-width: 160px;
                     box-shadow: 0px 8px 16px rgba(0, 0, 0, 0.2);
                     z-index: 1;
                     border-radius: 5px;
@@ -700,7 +658,9 @@ function joinChat(username) {
                 }
             </style>
         </div>
-        
+        <div id="hint-box" style="display: none; position: absolute; background: #f9f9f9; border: 1px solid #ccc; padding: 10px; border-radius: 5px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); z-index: 1000;">
+            Hold Shift while sending a message to send it anonymously!
+        </div>
         <script>
             const hintBox = document.getElementById('hint-box');
             const sendButton = document.getElementById('send-button');
@@ -726,9 +686,6 @@ function joinChat(username) {
         <div id="online-users-bar">
             <h3>Online Users</h3>
             <ul id="online-users-list"></ul>
-        </div>
-        <div id="loading-indicator" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.8); color: white; display: flex; justify-content: center; align-items: center; z-index: 1000;">
-            <h2>Loading messages...</h2>
         </div>
         <!-- Private Message Box -->
         <div id="private-message-box" style="position: fixed; bottom: 10px; right: 10px; width: 300px; background: var(--pm-box-bg, #f1f1f1); border: 1px solid var(--pm-box-border, #ccc); border-radius: 5px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); display: none; z-index: 1000;">
@@ -794,9 +751,7 @@ function joinChat(username) {
                 }
             </style>
             <button type="submit" id="send-button">Send</button>
-            <div id="hint-box" style="display: block; position: absolute; background: #f9f9f9; border: 1px solid #ccc; padding: 10px; border-radius: 5px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); z-index: 1;">
-                Hold Shift while sending a message to send it anonymously!
-            </div>
+            
         </form>
     </div>
     <div id="gif-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.5); z-index: 1000; justify-content: center; align-items: center;">
@@ -906,7 +861,6 @@ function joinChat(username) {
         const logoutButton = document.getElementById('logout-button');
         const settingsButton = document.getElementById('settings-button');
         const rpsButton = document.getElementById('game-button');
-        const loadingIndicator = document.getElementById('loading-indicator');
         //const anonymousButton = document.getElementById('anonymous-button');
 
 
@@ -916,10 +870,6 @@ function joinChat(username) {
 
         // Load user details from localStorage on page load
         window.addEventListener('DOMContentLoaded', () => {
-
-            loadingIndicator.style.display = 'flex'; // Show the loading indicator
-
-
             // Load dark mode setting from localStorage
             console.log('Loading dark mode setting from localStorage...');
             const darkModeSetting = localStorage.getItem('dark-mode');
@@ -1327,7 +1277,6 @@ function joinChat(username) {
             socket.off('load_messages'); // Remove any existing listeners
             socket.on('load_messages', (messages) => {
                 console.log('load_messages event received');
-                loadingIndicator.style.display = 'none'; // Hide the loading indicator
                 const mutedUsers = JSON.parse(localStorage.getItem('mutedUsers')) || [];
                 messagesDiv.innerHTML = ''; // Clear the messages div to avoid duplicates
                 messages.forEach((message) => {
@@ -1594,7 +1543,7 @@ messageForm.addEventListener('submit', (e) => {
         if (isShiftPressed) {
             // Send message anonymously
             console.log("Sending anonymous message:", message);
-            socket.emit('send_message', { username: 'Anonymous', profilePic, message });
+            socket.emit('anonymous_message', { message });
             isShiftPressed = false;
         } else {
             // Send message normally
@@ -1879,28 +1828,16 @@ socket.on('reaction_users', (data) => {
 
         // Update the online users list
         socket.on('update_online_users', (users) => {
-        onlineUsersList.innerHTML = '';
-        let typingUsers = users.filter(user => user.isTyping && user.username !== username);
-
-        // Update the online users bar
-        users.forEach((user) => {
-            const userItem = document.createElement('li');
-            userItem.textContent = user.username;
-            if (user.isTyping) {
-                userItem.textContent += ' - typing...';
-            }
-            onlineUsersList.appendChild(userItem);
+            onlineUsersList.innerHTML = '';
+            users.forEach((user) => {
+                const userItem = document.createElement('li');
+                userItem.textContent = user.username;
+                if (user.isTyping) {
+                    userItem.textContent += ' - typing...';
+                }
+                onlineUsersList.appendChild(userItem);
+            });
         });
-
-        // Update the typing indicator in the chat
-        const typingIndicator = document.getElementById('typing-indicator');
-        if (typingUsers.length > 0) {
-            typingIndicator.textContent = `${typingUsers.map(user => user.username).join(', ')} is typing...`;
-            typingIndicator.style.display = 'block';
-        } else {
-            typingIndicator.style.display = 'none';
-        }
-    });
 
         // Handle typing indicator
         let typingTimeout;
@@ -2048,7 +1985,6 @@ socket.on('reaction_users', (data) => {
         const tictactoeButton = document.getElementById('tictactoe-button');
         const forceButton = document.getElementById('force-button');
         const fpsButton = document.getElementById('fps-button');
-        const pictionaryButton = document.getElementById('pictionary-button');
         const whiteboardButton = document.getElementById('whiteboard-button');
         const tictactoeModal = document.getElementById('tictactoe-modal');
         const tictactoeBoard = document.getElementById('tictactoe-board');
@@ -2062,10 +1998,6 @@ socket.on('reaction_users', (data) => {
 
         fpsButton.addEventListener('click', () => {
             window.open('https://814850.xyz/fps', '_blank'); 
-        });
-
-        pictionaryButton.addEventListener('click', () => {
-            window.open('https://814850.xyz/pictionary', '_blank'); 
         });
 
         /* whiteboardButton.addEventListener('click', () => {
@@ -2955,6 +2887,7 @@ function sendNotification(title, body, icon) {
 
 // Handle receiving a message
 socket.on('receive_message', (data) => {
+
     // Send a desktop notification for the received message
     if (data.username !== username) { // Avoid notifying for own messages
         sendNotification(
@@ -3086,35 +3019,6 @@ if (tab) {
     function submitWord() {
         const word = prompt("Enter a word:");
         socket.emit('word_chain', { word, username });
-    }
-
-    // Handle Word Chain updates
-    socket.on('word_chain_update', (data) => {
-        const wordChainMessage = `${data.username} added the word: ${data.word}`;
-        appendMessage({ username: 'Word Chain', message: wordChainMessage });
-    });
-
-    // Handle invalid Word Chain word
-    socket.on('word_chain_invalid', (data) => {
-        alert(data.message);
-    });
-
-    // Start the Word Chain game
-    function startWordChain() {
-        socket.emit('start_wordchain', { username });
-    }
-
-    // Handle Word Chain game start
-    socket.on('word_chain_start', () => {
-        alert("Word Chain game has started! Type a word to play.");
-    });
-
-    // Submit a word for the Word Chain game
-    function submitWord() {
-        const word = prompt("Enter a word:");
-        if (word) {
-            socket.emit('word_chain', { word, username });
-        }
     }
 
     // Handle Word Chain updates

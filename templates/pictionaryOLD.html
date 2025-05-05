@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pictionary</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.5.4/socket.io.min.js"></script>
+    <style>
+        body {
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            background-color: #f4f4f4;
+            font-family: Arial, sans-serif;
+        }
+
+        .toolbar {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .toolbar button, .toolbar select {
+            padding: 10px 15px;
+            margin: 0 5px;
+            border: none;
+            border-radius: 5px;
+            background-color: #007bff;
+            color: white;
+            cursor: pointer;
+        }
+
+        .toolbar button:hover, .toolbar select:hover {
+            background-color: #0056b3;
+        }
+
+        canvas {
+            border: 1px solid #000;
+            background-color: #fff;
+            cursor: crosshair;
+        }
+
+        .chat {
+            margin-top: 10px;
+            width: 80%;
+            max-width: 600px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            background-color: #fff;
+            overflow-y: auto;
+            height: 200px;
+            padding: 10px;
+        }
+
+        .chat-message {
+            margin: 5px 0;
+        }
+
+        .chat-input {
+            margin-top: 10px;
+            display: flex;
+            justify-content: center;
+        }
+
+        .chat-input input {
+            width: 70%;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+
+        .chat-input button {
+            padding: 10px 15px;
+            margin-left: 5px;
+            border: none;
+            border-radius: 5px;
+            background-color: #28a745;
+            color: white;
+            cursor: pointer;
+        }
+
+        .chat-input button:hover {
+            background-color: #218838;
+        }
+
+        .user-list {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            width: 200px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            background-color: #fff;
+            padding: 10px;
+        }
+
+        .user-list h3 {
+            margin: 0 0 10px;
+            text-align: center;
+        }
+
+        .user-list ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .user-list li {
+            margin: 5px 0;
+        }
+    </style>
+</head>
+<body>
+    <div id="username-gate">
+        <h2>Enter your username to join Pictionary</h2>
+        <input type="text" id="username-input" placeholder="Enter your username">
+        <button id="join-game">Join Game</button>
+    </div>
+
+    <div id="game-container" style="display: none;">
+        <div class="toolbar">
+            <select id="tool">
+                <option value="pen">Pen</option>
+                <option value="eraser">Eraser</option>
+                <option value="fill">Fill</option>
+            </select>
+            <input type="color" id="color-picker" value="#000000">
+            <select id="line-width">
+                <option value="2">2px</option>
+                <option value="4">4px</option>
+                <option value="6">6px</option>
+                <option value="8">8px</option>
+                <option value="10">10px</option>
+            </select>
+            <button id="ready-up">Ready Up</button>
+        </div>
+        <canvas id="pictionary-canvas" width="800" height="500"></canvas>
+        <div class="chat" id="chat-box"></div>
+        <div class="chat-input">
+            <input type="text" id="guess-input" placeholder="Enter your guess...">
+            <button id="submit-guess">Submit</button>
+        </div>
+        <div class="user-list" id="user-list">
+            <h3>Players</h3>
+            <ul id="players"></ul>
+        </div>
+    </div>
+
+    <script>
+        const socket = io();
+        const canvas = document.getElementById('pictionary-canvas');
+        const ctx = canvas.getContext('2d');
+        const chatBox = document.getElementById('chat-box');
+        const guessInput = document.getElementById('guess-input');
+        const submitGuessButton = document.getElementById('submit-guess');
+        const joinGameButton = document.getElementById('join-game');
+        const usernameInput = document.getElementById('username-input');
+        const readyUpButton = document.getElementById('ready-up');
+        const userList = document.getElementById('players');
+        const toolSelector = document.getElementById('tool');
+        const colorPicker = document.getElementById('color-picker');
+        const lineWidthSelector = document.getElementById('line-width');
+
+        let username = '';
+        let drawing = false;
+        let isDrawer = false;
+        let ready = false;
+
+        // Join the game
+        joinGameButton.addEventListener('click', () => {
+            username = usernameInput.value.trim();
+            if (username) {
+                socket.emit('join_pictionary', { username });
+                document.getElementById('username-gate').style.display = 'none';
+                document.getElementById('game-container').style.display = 'block';
+            }
+        });
+
+        // Ready up
+        readyUpButton.addEventListener('click', () => {
+            ready = !ready;
+            socket.emit('ready_up', { username, ready });
+            readyUpButton.textContent = ready ? 'Unready' : 'Ready Up';
+        });
+
+        // Drawing logic
+        canvas.addEventListener('mousedown', (e) => {
+            if (isDrawer) {
+                drawing = true;
+                ctx.beginPath();
+                ctx.moveTo(e.offsetX, e.offsetY);
+                socket.emit('start_draw', { x: e.offsetX, y: e.offsetY });
+            }
+        });
+
+        // Fill tool logic
+function floodFill(x, y, targetColor, fillColor) {
+    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const data = imageData.data;
+    const stack = [[x, y]];
+
+    const targetR = targetColor[0];
+    const targetG = targetColor[1];
+    const targetB = targetColor[2];
+    const targetA = targetColor[3];
+
+    const fillR = parseInt(fillColor.slice(1, 3), 16);
+    const fillG = parseInt(fillColor.slice(3, 5), 16);
+    const fillB = parseInt(fillColor.slice(5, 7), 16);
+
+    function matchColor(pixelIndex) {
+        return (
+            data[pixelIndex] === targetR &&
+            data[pixelIndex + 1] === targetG &&
+            data[pixelIndex + 2] === targetB &&
+            data[pixelIndex + 3] === targetA
+        );
+    }
+
+    function colorPixel(pixelIndex) {
+        data[pixelIndex] = fillR;
+        data[pixelIndex + 1] = fillG;
+        data[pixelIndex + 2] = fillB;
+        data[pixelIndex + 3] = 255; // Fully opaque
+    }
+
+    const startPixelIndex = (y * canvas.width + x) * 4;
+    const startColor = [
+        data[startPixelIndex],
+        data[startPixelIndex + 1],
+        data[startPixelIndex + 2],
+        data[startPixelIndex + 3],
+    ];
+
+    if (matchColor(startPixelIndex)) return;
+
+    while (stack.length) {
+        const [currentX, currentY] = stack.pop();
+        const pixelIndex = (currentY * canvas.width + currentX) * 4;
+
+        if (!matchColor(pixelIndex)) continue;
+
+        colorPixel(pixelIndex);
+
+        if (currentX > 0) stack.push([currentX - 1, currentY]);
+        if (currentX < canvas.width - 1) stack.push([currentX + 1, currentY]);
+        if (currentY > 0) stack.push([currentX, currentY - 1]);
+        if (currentY < canvas.height - 1) stack.push([currentX, currentY + 1]);
+    }
+
+    ctx.putImageData(imageData, 0, 0);
+}
+
+    // Handle fill tool
+    canvas.addEventListener('click', (e) => {
+        if (toolSelector.value === 'fill') {
+            const x = e.offsetX;
+            const y = e.offsetY;
+            const targetColor = ctx.getImageData(x, y, 1, 1).data;
+            const fillColor = colorPicker.value;
+
+            floodFill(x, y, targetColor, fillColor);
+            socket.emit('fill', { x, y, fillColor });
+        }
+    });
+
+    // Sync fill tool across clients
+    socket.on('fill', (data) => {
+        const { x, y, fillColor } = data;
+        const targetColor = ctx.getImageData(x, y, 1, 1).data;
+        floodFill(x, y, targetColor, fillColor);
+    });
+
+    canvas.addEventListener('mousemove', (e) => {
+    if (drawing && isDrawer) {
+        const tool = toolSelector.value;
+        const color = colorPicker.value;
+        const lineWidth = parseInt(lineWidthSelector.value, 10);
+
+        ctx.strokeStyle = tool === 'pen' ? color : '#ffffff';
+        ctx.lineWidth = lineWidth;
+        ctx.lineTo(e.offsetX, e.offsetY);
+        ctx.stroke();
+
+        socket.emit('draw', { x: e.offsetX, y: e.offsetY, tool, color, lineWidth });
+    }
+});
+
+    socket.on('draw', (data) => {
+        ctx.beginPath(); // Start a new path for each segment
+        ctx.strokeStyle = data.tool === 'pen' ? data.color : '#ffffff';
+        ctx.lineWidth = data.lineWidth;
+        ctx.moveTo(data.prevX, data.prevY); // Move to the previous point
+        ctx.lineTo(data.x, data.y); // Draw to the current point
+        ctx.stroke();
+    });
+
+    canvas.addEventListener('mouseup', () => {
+    if (isDrawer) {
+        drawing = false;
+        socket.emit('stop_draw');
+    }
+});
+
+    socket.on('stop_draw', () => {
+        ctx.beginPath(); // Reset the path to prevent connecting lines
+    });
+
+        // Handle new round
+        socket.on('new_round', (data) => {
+            isDrawer = data.drawer === username;
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            if (isDrawer) {
+                alert(`You are the drawer! Draw the word: ${data.word}`);
+            } else {
+                alert(`${data.drawer} is drawing! Try to guess the word.`);
+            }
+        });
+
+        // Submit a guess
+        submitGuessButton.addEventListener('click', () => {
+            const guess = guessInput.value.trim();
+            if (guess) {
+                socket.emit('guess_pictionary', { guess, username });
+                guessInput.value = '';
+            }
+        });
+
+        // Handle correct guess
+        socket.on('pictionary_correct', (data) => {
+            const message = document.createElement('div');
+            message.classList.add('chat-message');
+            message.textContent = `${data.username} guessed correctly!`;
+            chatBox.appendChild(message);
+            chatBox.scrollTop = chatBox.scrollHeight;
+        });
+
+        // Handle incorrect guess
+        socket.on('pictionary_incorrect', (data) => {
+            const message = document.createElement('div');
+            message.classList.add('chat-message');
+            message.textContent = `${data.username} guessed: ${data.guess}`;
+            chatBox.appendChild(message);
+            chatBox.scrollTop = chatBox.scrollHeight;
+        });
+
+        // Update player list
+        socket.on('update_players', (players) => {
+            userList.innerHTML = '';
+            players.forEach(player => {
+                const li = document.createElement('li');
+                li.textContent = player.username + (player.ready ? ' (Ready)' : '');
+                userList.appendChild(li);
+            });
+        });
+    </script>
+</body>
+</html>
